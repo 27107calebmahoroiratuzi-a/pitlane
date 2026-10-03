@@ -3,6 +3,7 @@ package rw.ac.auca.garagerepairshopmanagementsystem.controller;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import rw.ac.auca.garagerepairshopmanagementsystem.dto.VehicleRequest;
 import rw.ac.auca.garagerepairshopmanagementsystem.dto.VehicleResponse;
@@ -21,6 +22,7 @@ public class VehicleController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     public ResponseEntity<VehicleResponse> create(
             @Valid @RequestBody VehicleRequest request
     ) {
@@ -31,6 +33,7 @@ public class VehicleController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','STAFF','USER')")
     public ResponseEntity<List<VehicleResponse>> findAll() {
 
         return ResponseEntity.ok(
@@ -39,6 +42,7 @@ public class VehicleController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','STAFF','USER')")
     public ResponseEntity<VehicleResponse> findById(
             @PathVariable Long id
     ) {
@@ -49,6 +53,7 @@ public class VehicleController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     public ResponseEntity<VehicleResponse> update(
             @PathVariable Long id,
             @Valid @RequestBody VehicleRequest request
@@ -60,6 +65,7 @@ public class VehicleController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(
             @PathVariable Long id
     ) {

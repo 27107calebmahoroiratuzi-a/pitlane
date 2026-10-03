@@ -8,6 +8,7 @@ import rw.ac.auca.garagerepairshopmanagementsystem.exception.BusinessException;
 import rw.ac.auca.garagerepairshopmanagementsystem.exception.ResourceNotFoundException;
 import rw.ac.auca.garagerepairshopmanagementsystem.model.*;
 import rw.ac.auca.garagerepairshopmanagementsystem.repository.RepairJobRepository;
+import rw.ac.auca.garagerepairshopmanagementsystem.repository.InvoiceRepository;
 import rw.ac.auca.garagerepairshopmanagementsystem.repository.VehicleRepository;
 
 import java.time.LocalDateTime;
@@ -18,13 +19,16 @@ public class RepairJobService {
 
     private final RepairJobRepository repairJobRepository;
     private final VehicleRepository vehicleRepository;
+        private final InvoiceRepository invoiceRepository;
 
     public RepairJobService(
             RepairJobRepository repairJobRepository,
-            VehicleRepository vehicleRepository
+                        VehicleRepository vehicleRepository,
+                        InvoiceRepository invoiceRepository
     ) {
         this.repairJobRepository = repairJobRepository;
         this.vehicleRepository = vehicleRepository;
+                this.invoiceRepository = invoiceRepository;
     }
 
     @Transactional
@@ -89,6 +93,10 @@ public class RepairJobService {
             RepairJobRequest request
     ) {
 
+                if (invoiceRepository.existsByRepairJobId(id)) {
+                        throw new BusinessException("An invoiced repair job cannot be changed");
+                }
+
         RepairJob job = repairJobRepository.findById(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
@@ -136,6 +144,10 @@ public class RepairJobService {
 
     @Transactional
     public void delete(Long id) {
+
+                if (invoiceRepository.existsByRepairJobId(id)) {
+                        throw new BusinessException("An invoiced repair job cannot be deleted");
+                }
 
         RepairJob job = repairJobRepository.findById(id)
                 .orElseThrow(() ->

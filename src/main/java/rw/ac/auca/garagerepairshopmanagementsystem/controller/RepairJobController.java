@@ -3,6 +3,7 @@ package rw.ac.auca.garagerepairshopmanagementsystem.controller;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import rw.ac.auca.garagerepairshopmanagementsystem.dto.RepairJobRequest;
 import rw.ac.auca.garagerepairshopmanagementsystem.dto.RepairJobResponse;
@@ -23,6 +24,7 @@ public class RepairJobController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','STAFF')")
     public ResponseEntity<RepairJobResponse> create(
             @Valid @RequestBody RepairJobRequest request
     ) {
@@ -33,6 +35,7 @@ public class RepairJobController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','STAFF','USER')")
     public ResponseEntity<List<RepairJobResponse>> findAll() {
 
         return ResponseEntity.ok(
@@ -41,6 +44,7 @@ public class RepairJobController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','STAFF','USER')")
     public ResponseEntity<RepairJobResponse> findById(
             @PathVariable Long id
     ) {
@@ -51,6 +55,7 @@ public class RepairJobController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','STAFF')")
     public ResponseEntity<RepairJobResponse> update(
             @PathVariable Long id,
             @Valid @RequestBody RepairJobRequest request
@@ -62,6 +67,7 @@ public class RepairJobController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(
             @PathVariable Long id
     ) {

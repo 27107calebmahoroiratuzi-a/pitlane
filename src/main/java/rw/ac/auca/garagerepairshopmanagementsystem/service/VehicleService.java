@@ -1,5 +1,7 @@
 package rw.ac.auca.garagerepairshopmanagementsystem.service;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import rw.ac.auca.garagerepairshopmanagementsystem.dto.VehicleRequest;
@@ -33,6 +35,7 @@ public class VehicleService {
     }
 
     @Transactional
+    @CacheEvict(value = "vehicles", allEntries = true)
     public VehicleResponse create(VehicleRequest request) {
 
         validateYear(request.getYear());
@@ -64,6 +67,7 @@ public class VehicleService {
         return toResponse(vehicleRepository.save(vehicle));
     }
 
+    @Cacheable(value = "vehicles", key = "'all'")
     public List<VehicleResponse> findAll() {
 
         return vehicleRepository.findAll()
@@ -72,6 +76,7 @@ public class VehicleService {
                 .toList();
     }
 
+    @Cacheable(value = "vehicles", key = "#id")
     public VehicleResponse findById(Long id) {
 
         Vehicle vehicle = vehicleRepository.findById(id)
@@ -84,6 +89,7 @@ public class VehicleService {
     }
 
     @Transactional
+    @CacheEvict(value = "vehicles", allEntries = true)
     public VehicleResponse update(
             Long id,
             VehicleRequest request
@@ -123,6 +129,7 @@ public class VehicleService {
     }
 
     @Transactional
+    @CacheEvict(value = "vehicles", allEntries = true)
     public void delete(Long id) {
 
         Vehicle vehicle = vehicleRepository.findById(id)

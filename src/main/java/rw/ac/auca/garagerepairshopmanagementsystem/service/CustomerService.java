@@ -1,5 +1,7 @@
 package rw.ac.auca.garagerepairshopmanagementsystem.service;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import rw.ac.auca.garagerepairshopmanagementsystem.dto.CustomerRequest;
@@ -21,6 +23,7 @@ public class CustomerService {
     }
 
     @Transactional
+    @CacheEvict(value = "customers", allEntries = true)
     public CustomerResponse create(CustomerRequest request) {
 
         if (customerRepository.existsByEmail(request.getEmail())) {
@@ -41,6 +44,7 @@ public class CustomerService {
         return toResponse(customerRepository.save(customer));
     }
 
+    @Cacheable(value = "customers", key = "'all'")
     public List<CustomerResponse> findAll() {
 
         return customerRepository.findAll()
@@ -49,6 +53,7 @@ public class CustomerService {
                 .toList();
     }
 
+    @Cacheable(value = "customers", key = "#id")
     public CustomerResponse findById(Long id) {
 
         Customer customer = customerRepository.findById(id)
@@ -61,6 +66,7 @@ public class CustomerService {
     }
 
     @Transactional
+    @CacheEvict(value = "customers", allEntries = true)
     public CustomerResponse update(Long id, CustomerRequest request) {
 
         Customer customer = customerRepository.findById(id)
@@ -88,6 +94,7 @@ public class CustomerService {
     }
 
     @Transactional
+    @CacheEvict(value = "customers", allEntries = true)
     public void delete(Long id) {
 
         Customer customer = customerRepository.findById(id)

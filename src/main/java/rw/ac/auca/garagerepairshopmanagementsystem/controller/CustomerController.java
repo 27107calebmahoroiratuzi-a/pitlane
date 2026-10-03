@@ -3,6 +3,7 @@ package rw.ac.auca.garagerepairshopmanagementsystem.controller;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import rw.ac.auca.garagerepairshopmanagementsystem.dto.CustomerRequest;
 import rw.ac.auca.garagerepairshopmanagementsystem.dto.CustomerResponse;
@@ -21,6 +22,7 @@ public class CustomerController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     public ResponseEntity<CustomerResponse> create(
             @Valid @RequestBody CustomerRequest request
     ) {
@@ -30,6 +32,7 @@ public class CustomerController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','STAFF','USER')")
     public ResponseEntity<List<CustomerResponse>> findAll() {
 
         return ResponseEntity.ok(
@@ -38,6 +41,7 @@ public class CustomerController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','STAFF','USER')")
     public ResponseEntity<CustomerResponse> findById(
             @PathVariable Long id
     ) {
@@ -48,6 +52,7 @@ public class CustomerController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     public ResponseEntity<CustomerResponse> update(
             @PathVariable Long id,
             @Valid @RequestBody CustomerRequest request
@@ -59,6 +64,7 @@ public class CustomerController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(
             @PathVariable Long id
     ) {
