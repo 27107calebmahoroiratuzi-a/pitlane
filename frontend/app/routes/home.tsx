@@ -330,6 +330,17 @@ function LoginScreen({ onSignIn, notice }: { onSignIn: (username: string, passwo
     <div className="auth-panel">
       <aside className="auth-brand">
         <div className="auth-brand-lockup"><span className="auth-brand-mark"><Gauge size={22} /></span><strong>pitlane</strong></div>
+        <div className="auth-brand-message">
+          <span className="auth-brand-kicker">SERVICE DESK <i /></span>
+          <h1>Every repair<br /><em>has a next move.</em></h1>
+          <div className="auth-brand-illustration" aria-hidden="true">
+            <span className="auth-bay-number">BAY 03</span>
+            <div className="auth-bay-guides"><i /><i /><i /></div>
+            <CarFront className="auth-car-icon" size={94} strokeWidth={1.1} />
+            <span className="auth-bay-signal" />
+          </div>
+          <p>Kigali Auto Works <span>·</span> Kigali, Rwanda</p>
+        </div>
         <div className="auth-brand-bottom"><span>GARAGE OPERATIONS</span><div><i /> WORKSHOP SYSTEM</div></div>
       </aside>
       <section className="auth-form-panel">
