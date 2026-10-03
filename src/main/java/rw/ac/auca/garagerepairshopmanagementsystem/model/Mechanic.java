@@ -7,8 +7,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "mechanics", uniqueConstraints = {
         @UniqueConstraint(name = "uk_mechanic_uuid", columnNames = "uuid"),
-        @UniqueConstraint(name = "uk_mechanic_email", columnNames = "email"),
-        @UniqueConstraint(name = "uk_mechanic_phone", columnNames = "phone")
+    @UniqueConstraint(name = "uk_mechanic_garage_email", columnNames = {"garage_id", "email"}),
+    @UniqueConstraint(name = "uk_mechanic_garage_phone", columnNames = {"garage_id", "phone"})
 })
 public class Mechanic {
 
@@ -22,10 +22,10 @@ public class Mechanic {
     @Column(name = "full_name", nullable = false, length = 100)
     private String fullName;
 
-    @Column(nullable = false, unique = true, length = 30)
+    @Column(nullable = false, length = 30)
     private String phone;
 
-    @Column(nullable = false, unique = true, length = 150)
+    @Column(nullable = false, length = 150)
     private String email;
 
     @Column(length = 100)
@@ -33,6 +33,10 @@ public class Mechanic {
 
     @Column(nullable = false)
     private boolean active = true;
+
+    @ManyToOne
+    @JoinColumn(name = "garage_id", foreignKey = @ForeignKey(name = "fk_mechanic_garage"))
+    private Garage garage;
 
     @PrePersist
     public void generateUuid() {
@@ -51,9 +55,11 @@ public class Mechanic {
     public String getEmail() { return email; }
     public String getSpecialization() { return specialization; }
     public boolean isActive() { return active; }
+    public Garage getGarage() { return garage; }
     public void setFullName(String fullName) { this.fullName = fullName; }
     public void setPhone(String phone) { this.phone = phone; }
     public void setEmail(String email) { this.email = email; }
     public void setSpecialization(String specialization) { this.specialization = specialization; }
     public void setActive(boolean active) { this.active = active; }
+    public void setGarage(Garage garage) { this.garage = garage; }
 }

@@ -3,13 +3,20 @@ package rw.ac.auca.garagerepairshopmanagementsystem.repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import rw.ac.auca.garagerepairshopmanagementsystem.model.Customer;
 
+import java.util.List;
+import java.util.Optional;
+
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
-    boolean existsByEmail(String email);
+    List<Customer> findAllByGarageId(Long garageId);
 
-    boolean existsByPhone(String phone);
+    Optional<Customer> findByIdAndGarageId(Long id, Long garageId);
 
-    boolean existsByEmailAndIdNot(String email, Long id);
+    boolean existsByEmailAndGarageId(String email, Long garageId);
 
-    boolean existsByPhoneAndIdNot(String phone, Long id);
+    boolean existsByPhoneAndGarageId(String phone, Long garageId);
+
+    boolean existsByEmailAndIdNotAndGarageId(String email, Long id, Long garageId);
+
+    boolean existsByPhoneAndIdNotAndGarageId(String phone, Long id, Long garageId);
 }

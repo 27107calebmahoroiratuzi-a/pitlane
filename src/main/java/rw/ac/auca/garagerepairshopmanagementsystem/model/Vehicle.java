@@ -22,7 +22,7 @@ import jakarta.persistence.UniqueConstraint;
         name = "vehicles",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_vehicle_uuid", columnNames = "uuid"),
-                @UniqueConstraint(name = "uk_vehicle_plate", columnNames = "plate_number")
+            @UniqueConstraint(name = "uk_vehicle_garage_plate", columnNames = {"garage_id", "plate_number"})
         }
 )
 public class Vehicle {
@@ -34,7 +34,7 @@ public class Vehicle {
     @Column(nullable = false, unique = true, updatable = false)
     private UUID uuid;
 
-    @Column(name = "plate_number", nullable = false, unique = true, length = 30)
+    @Column(name = "plate_number", nullable = false, length = 30)
     private String plateNumber;
 
     @Column(nullable = false, length = 50)
@@ -60,6 +60,10 @@ public class Vehicle {
             foreignKey = @ForeignKey(name = "fk_vehicle_customer")
     )
     private Customer customer;
+
+    @ManyToOne
+    @JoinColumn(name = "garage_id", foreignKey = @ForeignKey(name = "fk_vehicle_garage"))
+    private Garage garage;
 
     @PrePersist
     public void generateUuid() {
@@ -107,6 +111,10 @@ public class Vehicle {
         return customer;
     }
 
+    public Garage getGarage() {
+        return garage;
+    }
+
     public void setId(Long id) {
         this.id = id;
     }
@@ -141,5 +149,9 @@ public class Vehicle {
 
     public void setCustomer(Customer customer) {
         this.customer = customer;
+    }
+
+    public void setGarage(Garage garage) {
+        this.garage = garage;
     }
 }

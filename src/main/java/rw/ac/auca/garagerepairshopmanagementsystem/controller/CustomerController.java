@@ -22,7 +22,7 @@ public class CustomerController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+        @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN','MANAGER')")
     public ResponseEntity<CustomerResponse> create(
             @Valid @RequestBody CustomerRequest request
     ) {
@@ -32,7 +32,7 @@ public class CustomerController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','STAFF','USER')")
+        @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN','MANAGER','STAFF','USER')")
     public ResponseEntity<List<CustomerResponse>> findAll() {
 
         return ResponseEntity.ok(
@@ -41,7 +41,7 @@ public class CustomerController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','STAFF','USER')")
+        @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN','MANAGER','STAFF','USER')")
     public ResponseEntity<CustomerResponse> findById(
             @PathVariable Long id
     ) {
@@ -52,7 +52,7 @@ public class CustomerController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+        @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN','MANAGER')")
     public ResponseEntity<CustomerResponse> update(
             @PathVariable Long id,
             @Valid @RequestBody CustomerRequest request
@@ -64,7 +64,7 @@ public class CustomerController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+        @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN')")
     public ResponseEntity<Void> delete(
             @PathVariable Long id
     ) {

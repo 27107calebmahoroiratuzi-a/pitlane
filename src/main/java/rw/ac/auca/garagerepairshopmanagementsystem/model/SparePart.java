@@ -8,7 +8,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "spare_parts", uniqueConstraints = {
         @UniqueConstraint(name = "uk_spare_part_uuid", columnNames = "uuid"),
-        @UniqueConstraint(name = "uk_spare_part_sku", columnNames = "sku")
+    @UniqueConstraint(name = "uk_spare_part_garage_sku", columnNames = {"garage_id", "sku"})
 })
 public class SparePart {
 
@@ -19,7 +19,7 @@ public class SparePart {
     @Column(nullable = false, unique = true, updatable = false)
     private UUID uuid;
 
-    @Column(nullable = false, unique = true, length = 50)
+    @Column(nullable = false, length = 50)
     private String sku;
 
     @Column(nullable = false, length = 150)
@@ -36,6 +36,10 @@ public class SparePart {
 
     @Column(name = "reorder_level", nullable = false)
     private Integer reorderLevel = 0;
+
+    @ManyToOne
+    @JoinColumn(name = "garage_id", foreignKey = @ForeignKey(name = "fk_spare_part_garage"))
+    private Garage garage;
 
     @PrePersist
     public void generateUuid() {
@@ -58,10 +62,12 @@ public class SparePart {
     public BigDecimal getUnitPrice() { return unitPrice; }
     public Integer getStockQuantity() { return stockQuantity; }
     public Integer getReorderLevel() { return reorderLevel; }
+    public Garage getGarage() { return garage; }
     public void setSku(String sku) { this.sku = sku; }
     public void setName(String name) { this.name = name; }
     public void setDescription(String description) { this.description = description; }
     public void setUnitPrice(BigDecimal unitPrice) { this.unitPrice = unitPrice; }
     public void setStockQuantity(Integer stockQuantity) { this.stockQuantity = stockQuantity; }
     public void setReorderLevel(Integer reorderLevel) { this.reorderLevel = reorderLevel; }
+    public void setGarage(Garage garage) { this.garage = garage; }
 }

@@ -9,6 +9,7 @@ import rw.ac.auca.garagerepairshopmanagementsystem.exception.BusinessException;
 import rw.ac.auca.garagerepairshopmanagementsystem.exception.ResourceNotFoundException;
 import rw.ac.auca.garagerepairshopmanagementsystem.model.*;
 import rw.ac.auca.garagerepairshopmanagementsystem.repository.*;
+import rw.ac.auca.garagerepairshopmanagementsystem.security.GarageContext;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -21,25 +22,28 @@ public class RepairJobWorkflowService {
     private final SparePartRepository sparePartRepository;
     private final RepairJobPartRepository repairJobPartRepository;
     private final InvoiceRepository invoiceRepository;
+    private final GarageContext garageContext;
 
     public RepairJobWorkflowService(RepairJobRepository repairJobRepository,
                                     MechanicRepository mechanicRepository,
                                     RepairJobAssignmentRepository assignmentRepository,
                                     SparePartRepository sparePartRepository,
                                     RepairJobPartRepository repairJobPartRepository,
-                                    InvoiceRepository invoiceRepository) {
+                                    InvoiceRepository invoiceRepository,
+                                    GarageContext garageContext) {
         this.repairJobRepository = repairJobRepository;
         this.mechanicRepository = mechanicRepository;
         this.assignmentRepository = assignmentRepository;
         this.sparePartRepository = sparePartRepository;
         this.repairJobPartRepository = repairJobPartRepository;
         this.invoiceRepository = invoiceRepository;
+        this.garageContext = garageContext;
     }
 
     @Transactional
     public RepairJobAssignmentResponse assignMechanic(Long jobId, Long mechanicId) {
         RepairJob job = getJob(jobId);
-        Mechanic mechanic = mechanicRepository.findById(mechanicId).orElseThrow(() ->
+        Mechanic mechanic = mechanicRepository.findByIdAndGarageId(mechanicId, garageContext.requireGarageId()).orElseThrow(() ->
                 new ResourceNotFoundException("Mechanic not found with ID: " + mechanicId));
         if (!mechanic.isActive()) {
             throw new BusinessException("Inactive mechanics cannot be assigned to repair jobs");
@@ -62,6 +66,7 @@ public class RepairJobWorkflowService {
 
     @Transactional
     public void unassignMechanic(Long jobId, Long mechanicId) {
+        getJob(jobId);
         RepairJobAssignment assignment = assignmentRepository.findByRepairJobIdAndMechanicId(jobId, mechanicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Mechanic assignment not found"));
         assignmentRepository.delete(assignment);
@@ -69,11 +74,12 @@ public class RepairJobWorkflowService {
 
     @Transactional
     public RepairJobPartResponse addPart(Long jobId, RepairJobPartRequest request) {
-        if (invoiceRepository.existsByRepairJobId(jobId)) {
+        RepairJob job = getJob(jobId);
+        Long garageId = garageContext.requireGarageId();
+        if (invoiceRepository.existsByRepairJobIdAndRepairJobVehicleGarageId(jobId, garageId)) {
             throw new BusinessException("Parts cannot be changed after the repair job has been invoiced");
         }
-        RepairJob job = getJob(jobId);
-        SparePart part = sparePartRepository.findByIdForUpdate(request.getSparePartId()).orElseThrow(() ->
+        SparePart part = sparePartRepository.findByIdForUpdateAndGarageId(request.getSparePartId(), garageId).orElseThrow(() ->
                 new ResourceNotFoundException("Spare part not found with ID: " + request.getSparePartId()));
         if (part.getStockQuantity() < request.getQuantity()) {
             throw new BusinessException("Insufficient stock for spare part " + part.getSku());
@@ -102,7 +108,8 @@ public class RepairJobWorkflowService {
 
     @Transactional
     public void removePart(Long jobId, Long usageId) {
-        if (invoiceRepository.existsByRepairJobId(jobId)) {
+        getJob(jobId);
+        if (invoiceRepository.existsByRepairJobIdAndRepairJobVehicleGarageId(jobId, garageContext.requireGarageId())) {
             throw new BusinessException("Parts cannot be changed after the repair job has been invoiced");
         }
         RepairJobPart usage = repairJobPartRepository.findById(usageId).orElseThrow(() ->
@@ -117,7 +124,7 @@ public class RepairJobWorkflowService {
     }
 
     private RepairJob getJob(Long id) {
-        return repairJobRepository.findById(id).orElseThrow(() ->
+        return repairJobRepository.findByIdAndVehicleGarageId(id, garageContext.requireGarageId()).orElseThrow(() ->
                 new ResourceNotFoundException("Repair job not found with ID: " + id));
     }
 

@@ -6,6 +6,8 @@ public record AuthResponse(
         String token,
         String username,
         Set<String> roles,
-        String message
+        String message,
+        Long garageId,
+        String garageName
 ) {
 }

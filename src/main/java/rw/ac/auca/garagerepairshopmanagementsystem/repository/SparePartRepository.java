@@ -7,13 +7,16 @@ import org.springframework.data.repository.query.Param;
 import rw.ac.auca.garagerepairshopmanagementsystem.model.SparePart;
 
 import jakarta.persistence.LockModeType;
+import java.util.List;
 import java.util.Optional;
 
 public interface SparePartRepository extends JpaRepository<SparePart, Long> {
-    boolean existsBySku(String sku);
-    boolean existsBySkuAndIdNot(String sku, Long id);
+    List<SparePart> findAllByGarageId(Long garageId);
+    Optional<SparePart> findByIdAndGarageId(Long id, Long garageId);
+    boolean existsBySkuAndGarageId(String sku, Long garageId);
+    boolean existsBySkuAndIdNotAndGarageId(String sku, Long id, Long garageId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select part from SparePart part where part.id = :id")
-    Optional<SparePart> findByIdForUpdate(@Param("id") Long id);
+    @Query("select part from SparePart part where part.id = :id and part.garage.id = :garageId")
+    Optional<SparePart> findByIdForUpdateAndGarageId(@Param("id") Long id, @Param("garageId") Long garageId);
 }

@@ -26,11 +26,13 @@ import rw.ac.auca.garagerepairshopmanagementsystem.dto.RepairJobRequest;
 import rw.ac.auca.garagerepairshopmanagementsystem.dto.RepairJobPartRequest;
 import rw.ac.auca.garagerepairshopmanagementsystem.dto.SparePartRequest;
 import rw.ac.auca.garagerepairshopmanagementsystem.dto.VehicleRequest;
+import rw.ac.auca.garagerepairshopmanagementsystem.model.Garage;
 import rw.ac.auca.garagerepairshopmanagementsystem.model.RepairJobStatus;
 import rw.ac.auca.garagerepairshopmanagementsystem.security.AppUser;
 import rw.ac.auca.garagerepairshopmanagementsystem.security.AppUserRepository;
 import rw.ac.auca.garagerepairshopmanagementsystem.security.AuthRequest;
 import rw.ac.auca.garagerepairshopmanagementsystem.security.Role;
+import rw.ac.auca.garagerepairshopmanagementsystem.repository.GarageRepository;
 
 import java.util.Set;
 
@@ -46,6 +48,9 @@ class GarageApiIntegrationTest {
 
         @Autowired
         private AppUserRepository appUserRepository;
+
+        @Autowired
+        private GarageRepository garageRepository;
 
         @Autowired
         private PasswordEncoder passwordEncoder;
@@ -211,11 +216,13 @@ class GarageApiIntegrationTest {
 
     private String registerAdminToken() throws Exception {
         String password = "TestAdminPassword123!";
+        Garage garage = garageRepository.save(new Garage("Test Garage"));
         appUserRepository.save(new AppUser(
                 "garageadmin",
                 "garageadmin@example.com",
                 passwordEncoder.encode(password),
-                Set.of(Role.ADMIN)
+                Set.of(Role.GARAGE_ADMIN),
+                garage
         ));
 
         MvcResult result = mockMvc.perform(post("/api/auth/login")

@@ -3,6 +3,7 @@ package rw.ac.auca.garagerepairshopmanagementsystem.controller;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import rw.ac.auca.garagerepairshopmanagementsystem.dto.*;
 import rw.ac.auca.garagerepairshopmanagementsystem.service.InvoiceService;
@@ -12,6 +13,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/repair-jobs/{repairJobId}")
+@PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN','MANAGER','STAFF','USER')")
 public class RepairJobWorkflowController {
     private final RepairJobWorkflowService workflowService;
     private final InvoiceService invoiceService;
@@ -22,6 +24,7 @@ public class RepairJobWorkflowController {
     }
 
     @PostMapping("/mechanics/{mechanicId}")
+    @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN','MANAGER','STAFF')")
     public ResponseEntity<RepairJobAssignmentResponse> assignMechanic(
             @PathVariable Long repairJobId, @PathVariable Long mechanicId) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -34,12 +37,14 @@ public class RepairJobWorkflowController {
     }
 
     @DeleteMapping("/mechanics/{mechanicId}")
+    @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN','MANAGER','STAFF')")
     public ResponseEntity<Void> unassignMechanic(@PathVariable Long repairJobId, @PathVariable Long mechanicId) {
         workflowService.unassignMechanic(repairJobId, mechanicId);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/parts")
+    @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN','MANAGER','STAFF')")
     public ResponseEntity<RepairJobPartResponse> addPart(@PathVariable Long repairJobId,
                                                           @Valid @RequestBody RepairJobPartRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(workflowService.addPart(repairJobId, request));
@@ -51,12 +56,14 @@ public class RepairJobWorkflowController {
     }
 
     @DeleteMapping("/parts/{usageId}")
+    @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN','MANAGER','STAFF')")
     public ResponseEntity<Void> removePart(@PathVariable Long repairJobId, @PathVariable Long usageId) {
         workflowService.removePart(repairJobId, usageId);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/invoice")
+    @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN','MANAGER','STAFF')")
     public ResponseEntity<InvoiceResponse> issueInvoice(@PathVariable Long repairJobId) {
         return ResponseEntity.status(HttpStatus.CREATED).body(invoiceService.issueForRepairJob(repairJobId));
     }
