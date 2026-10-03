@@ -104,16 +104,58 @@ export type GarageData = {
   invoices: Invoice[];
 };
 
+export type AuthSession = {
+  token: string;
+  username: string;
+  roles: string[];
+  message: string;
+};
+
 const apiBase = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api").replace(/\/$/, "");
+const authStorageKey = "pitlane.auth";
+export const authExpiredEvent = "pitlane:auth-expired";
+
+export function readAuthSession(): AuthSession | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = window.sessionStorage.getItem(authStorageKey);
+    if (!stored) return null;
+    const session = JSON.parse(stored) as AuthSession;
+    return session.token && session.username && Array.isArray(session.roles) ? session : null;
+  } catch {
+    window.sessionStorage.removeItem(authStorageKey);
+    return null;
+  }
+}
+
+export function clearAuthSession(): void {
+  if (typeof window !== "undefined") window.sessionStorage.removeItem(authStorageKey);
+}
+
+export async function signIn(username: string, password: string): Promise<AuthSession> {
+  const session = await apiRequest<AuthSession>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+  });
+  window.sessionStorage.setItem(authStorageKey, JSON.stringify(session));
+  return session;
+}
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+  if (init?.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  const token = readAuthSession()?.token;
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+
   const response = await fetch(`${apiBase}${path}`, {
     ...init,
-    headers: {
-      ...(init?.body ? { "Content-Type": "application/json" } : {}),
-      ...init?.headers,
-    },
+    headers,
   });
+
+  if (response.status === 401) {
+    clearAuthSession();
+    if (typeof window !== "undefined") window.dispatchEvent(new Event(authExpiredEvent));
+  }
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => null) as { message?: string } | null;

@@ -2,10 +2,11 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import {
   Activity, ArrowDownRight, ArrowRight, Boxes, CarFront, Check, ChevronDown,
   CircleDollarSign, ClipboardList, Clock3, Gauge, LayoutDashboard, LoaderCircle,
-  Menu, Plus, Search, Settings2, ShieldCheck, Trash2, UsersRound, Wrench, X,
+  LogOut, Menu, Plus, Search, Settings2, ShieldCheck, Trash2, UsersRound, Wrench, X,
 } from "lucide-react";
 import {
-  apiRequest, loadGarageData, type Customer, type GarageData, type Invoice,
+  apiRequest, authExpiredEvent, clearAuthSession, loadGarageData, readAuthSession, signIn,
+  type AuthSession, type Customer, type GarageData, type Invoice,
   type JobAssignment, type JobPart, type Mechanic, type RepairJob, type SparePart, type Vehicle,
 } from "../api";
 import type { Route } from "./+types/home";
@@ -64,6 +65,8 @@ export default function Home() {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [assignments, setAssignments] = useState<JobAssignment[]>([]);
   const [jobParts, setJobParts] = useState<JobPart[]>([]);
+  const [session, setSession] = useState<AuthSession | null>(null);
+  const [sessionReady, setSessionReady] = useState(false);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
@@ -83,7 +86,29 @@ export default function Home() {
     }
   }
 
-  useEffect(() => { void refreshData(); }, []);
+  useEffect(() => {
+    setSession(readAuthSession());
+    setSessionReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!sessionReady) return;
+    if (!session) {
+      setLoading(false);
+      return;
+    }
+    void refreshData();
+  }, [sessionReady, session?.token]);
+
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      setSession(null);
+      setData({ customers: [], vehicles: [], mechanics: [], parts: [], jobs: [], invoices: [] });
+      setError("Your session expired. Please sign in again.");
+    };
+    window.addEventListener(authExpiredEvent, handleAuthExpired);
+    return () => window.removeEventListener(authExpiredEvent, handleAuthExpired);
+  }, []);
 
   useEffect(() => {
     if (!selectedJob) {
@@ -119,6 +144,19 @@ export default function Home() {
 
   function openCreate(section = activeSection) {
     if (section !== "overview" && section !== "invoices") setEditor({ section });
+  }
+
+  async function handleSignIn(username: string, password: string) {
+    const authenticatedSession = await signIn(username, password);
+    setSession(authenticatedSession);
+    setError("");
+  }
+
+  function handleSignOut() {
+    clearAuthSession();
+    setSession(null);
+    setData({ customers: [], vehicles: [], mechanics: [], parts: [], jobs: [], invoices: [] });
+    setError("");
   }
 
   async function submitEditor(event: FormEvent<HTMLFormElement>) {
@@ -238,13 +276,18 @@ export default function Home() {
   const totalBalance = data.invoices.reduce((sum, invoice) => sum + invoice.balanceDue, 0);
   const today = new Date();
 
+  if (!sessionReady) {
+    return <div className="auth-loading"><LoaderCircle size={20} className="spin" /><span>Loading session</span></div>;
+  }
+  if (!session) return <LoginScreen onSignIn={handleSignIn} notice={error} />;
+
   return <div className="app-frame">
     <aside className={`sidebar ${mobileNavOpen ? "sidebar-open" : ""}`}>
       <div className="brand-lockup"><div className="brand-mark"><Gauge size={21} strokeWidth={2.3} /></div><div><strong>pitlane</strong><span>GARAGE OPERATIONS</span></div><button className="icon-button nav-close" aria-label="Close navigation" onClick={() => setMobileNavOpen(false)}><X size={19} /></button></div>
       <div className="shop-switcher"><div className="shop-avatar">K</div><div className="shop-switcher-copy"><strong>Kigali Auto Works</strong><span>Workshop · Kigali</span></div><ChevronDown size={15} /></div>
       <div className="nav-caption">WORKSPACE</div>
       <nav className="main-nav" aria-label="Main navigation">{navigation.map(({ id, label, icon: Icon }) => <button key={id} className={`nav-item ${activeSection === id ? "nav-item-active" : ""}`} onClick={() => { setActiveSection(id); setMobileNavOpen(false); setSearch(""); }}><Icon size={18} strokeWidth={1.9} /><span>{label}</span>{id === "jobs" && activeCount > 0 && <span className="nav-count">{activeCount}</span>}{id === "inventory" && lowStockCount > 0 && <span className="nav-alert">{lowStockCount}</span>}</button>)}</nav>
-      <div className="sidebar-bottom"><div className="online-indicator"><span /> API connection <b>{loading ? "CONNECTING" : error ? "OFFLINE" : "READY"}</b></div><button className="nav-item settings-item" onClick={() => setNotice("Workshop settings are managed by your administrator.")}><Settings2 size={18} /><span>Settings</span></button><div className="user-profile"><div className="user-avatar">KM</div><div><strong>Workshop Manager</strong><span>Operations</span></div><ChevronDown size={15} /></div></div>
+      <div className="sidebar-bottom"><div className="online-indicator"><span /> API connection <b>{loading ? "CONNECTING" : error ? "OFFLINE" : "READY"}</b></div><button className="nav-item settings-item" onClick={() => setNotice("Workshop settings are managed by your administrator.")}><Settings2 size={18} /><span>Settings</span></button><div className="user-profile"><div className="user-avatar">{session.username.slice(0, 2).toUpperCase()}</div><div><strong>{session.username}</strong><span>{session.roles.join(" · ")}</span></div><button className="icon-button logout-button" title="Sign out" aria-label="Sign out" onClick={handleSignOut}><LogOut size={15} /></button></div></div>
     </aside>
     {mobileNavOpen && <button className="mobile-scrim" aria-label="Close navigation" onClick={() => setMobileNavOpen(false)} />}
 
@@ -263,6 +306,43 @@ export default function Home() {
     {selectedJob && <JobDialog job={selectedJob} mechanics={data.mechanics.filter((row) => row.active)} parts={data.parts} assignments={assignments} jobParts={jobParts} hasInvoice={data.invoices.some((invoice) => invoice.repairJobId === selectedJob.id)} working={working} onClose={() => setSelectedJob(null)} onAssign={submitAssignment} onAddPart={submitPartUsage} onIssueInvoice={() => void issueInvoice()} onRemovePart={(usageId) => void perform(async () => { await apiRequest(`/repair-jobs/${selectedJob.id}/parts/${usageId}`, { method: "DELETE" }); await refreshJobDetails(selectedJob.id); }, "Part returned to stock")} />}
     {selectedInvoice && <PaymentDialog invoice={selectedInvoice} working={working} onClose={() => setSelectedInvoice(null)} onSubmit={submitPayment} />}
   </div>;
+}
+
+function LoginScreen({ onSignIn, notice }: { onSignIn: (username: string, password: string) => Promise<void>; notice: string }) {
+  const [working, setWorking] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setWorking(true);
+    setError("");
+    try {
+      await onSignIn(String(form.get("username")), String(form.get("password")));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Sign in failed");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  return <main className="auth-screen">
+    <div className="auth-panel">
+      <aside className="auth-brand">
+        <div className="auth-brand-lockup"><span className="auth-brand-mark"><Gauge size={22} /></span><strong>pitlane</strong></div>
+        <div className="auth-brand-bottom"><span>GARAGE OPERATIONS</span><div><i /> WORKSHOP SYSTEM</div></div>
+      </aside>
+      <section className="auth-form-panel">
+        <div className="auth-form-heading"><span className="eyebrow-line" /><span>SECURE ACCESS</span><h1>Sign in</h1><p>Use your garage account to continue.</p></div>
+        {(error || notice) && <div className="alert alert-error" role="alert"><Activity size={16} /><span>{error || notice}</span></div>}
+        <form className="auth-form" onSubmit={submit}>
+          <label className="form-field">Username<input name="username" autoComplete="username" required autoFocus /></label>
+          <label className="form-field">Password<input name="password" type="password" autoComplete="current-password" required /></label>
+          <button className="button button-primary auth-submit" type="submit" disabled={working}>{working && <LoaderCircle size={16} className="spin" />}{working ? "Signing in" : "Sign in"}<ArrowRight size={16} /></button>
+        </form>
+      </section>
+    </div>
+  </main>;
 }
 
 function Overview({ data, loading, onOpenJobs, onOpenInventory, onOpenInvoices, onManageJob }: {
