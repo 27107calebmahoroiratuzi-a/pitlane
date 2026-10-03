@@ -23,7 +23,7 @@ public class UserPrincipal implements UserDetails {
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return appUser.getRoles().stream()
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.name()))
+            .map(role -> new SimpleGrantedAuthority("ROLE_" + role.effectiveRole().name()))
                 .collect(Collectors.toSet());
     }
 
@@ -67,5 +67,13 @@ public class UserPrincipal implements UserDetails {
 
     public Set<Role> getRoles() {
         return appUser.getRoles();
+    }
+
+    public Long getGarageId() {
+        return appUser.getGarage() == null ? null : appUser.getGarage().getId();
+    }
+
+    public String getGarageName() {
+        return appUser.getGarage() == null ? null : appUser.getGarage().getName();
     }
 }

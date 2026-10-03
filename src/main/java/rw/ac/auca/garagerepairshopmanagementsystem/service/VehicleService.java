@@ -13,6 +13,7 @@ import rw.ac.auca.garagerepairshopmanagementsystem.model.Vehicle;
 import rw.ac.auca.garagerepairshopmanagementsystem.repository.CustomerRepository;
 import rw.ac.auca.garagerepairshopmanagementsystem.repository.RepairJobRepository;
 import rw.ac.auca.garagerepairshopmanagementsystem.repository.VehicleRepository;
+import rw.ac.auca.garagerepairshopmanagementsystem.security.GarageContext;
 
 import java.time.Year;
 import java.util.List;
@@ -23,33 +24,34 @@ public class VehicleService {
     private final VehicleRepository vehicleRepository;
     private final CustomerRepository customerRepository;
     private final RepairJobRepository repairJobRepository;
+        private final GarageContext garageContext;
 
     public VehicleService(
             VehicleRepository vehicleRepository,
             CustomerRepository customerRepository,
-            RepairJobRepository repairJobRepository
+            RepairJobRepository repairJobRepository,
+            GarageContext garageContext
     ) {
         this.vehicleRepository = vehicleRepository;
         this.customerRepository = customerRepository;
         this.repairJobRepository = repairJobRepository;
+        this.garageContext = garageContext;
     }
 
     @Transactional
     @CacheEvict(value = "vehicles", allEntries = true)
     public VehicleResponse create(VehicleRequest request) {
+                Long garageId = garageContext.requireGarageId();
 
         validateYear(request.getYear());
 
-        if (vehicleRepository.existsByPlateNumber(
-                request.getPlateNumber())) {
+        if (vehicleRepository.existsByPlateNumberAndGarageId(request.getPlateNumber(), garageId)) {
             throw new BusinessException(
                     "Vehicle plate number already exists"
             );
         }
 
-        Customer customer = customerRepository.findById(
-                request.getCustomerId()
-        ).orElseThrow(() ->
+        Customer customer = customerRepository.findByIdAndGarageId(request.getCustomerId(), garageId).orElseThrow(() ->
                 new ResourceNotFoundException(
                         "Customer not found with ID: "
                                 + request.getCustomerId()
@@ -63,23 +65,26 @@ public class VehicleService {
         vehicle.setYear(request.getYear());
         vehicle.setColor(request.getColor());
         vehicle.setCustomer(customer);
+        vehicle.setGarage(customer.getGarage());
 
         return toResponse(vehicleRepository.save(vehicle));
     }
 
-    @Cacheable(value = "vehicles", key = "'all'")
+        @Transactional(readOnly = true)
+        @Cacheable(value = "vehicles", key = "@garageContext.requireGarageId()")
     public List<VehicleResponse> findAll() {
 
-        return vehicleRepository.findAll()
+                return vehicleRepository.findAllByGarageId(garageContext.requireGarageId())
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
-    @Cacheable(value = "vehicles", key = "#id")
+        @Transactional(readOnly = true)
+        @Cacheable(value = "vehicles", key = "#id + ':' + @garageContext.requireGarageId()")
     public VehicleResponse findById(Long id) {
 
-        Vehicle vehicle = vehicleRepository.findById(id)
+                Vehicle vehicle = vehicleRepository.findByIdAndGarageId(id, garageContext.requireGarageId())
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Vehicle not found with ID: " + id
@@ -94,25 +99,23 @@ public class VehicleService {
             Long id,
             VehicleRequest request
     ) {
+                Long garageId = garageContext.requireGarageId();
 
         validateYear(request.getYear());
 
-        Vehicle vehicle = vehicleRepository.findById(id)
+        Vehicle vehicle = vehicleRepository.findByIdAndGarageId(id, garageId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Vehicle not found with ID: " + id
                         ));
 
-        if (vehicleRepository.existsByPlateNumberAndIdNot(
-                request.getPlateNumber(), id)) {
+        if (vehicleRepository.existsByPlateNumberAndIdNotAndGarageId(request.getPlateNumber(), id, garageId)) {
             throw new BusinessException(
                     "Vehicle plate number already exists"
             );
         }
 
-        Customer customer = customerRepository.findById(
-                request.getCustomerId()
-        ).orElseThrow(() ->
+        Customer customer = customerRepository.findByIdAndGarageId(request.getCustomerId(), garageId).orElseThrow(() ->
                 new ResourceNotFoundException(
                         "Customer not found with ID: "
                                 + request.getCustomerId()
@@ -124,6 +127,7 @@ public class VehicleService {
         vehicle.setYear(request.getYear());
         vehicle.setColor(request.getColor());
         vehicle.setCustomer(customer);
+        vehicle.setGarage(customer.getGarage());
 
         return toResponse(vehicleRepository.save(vehicle));
     }
@@ -131,8 +135,9 @@ public class VehicleService {
     @Transactional
     @CacheEvict(value = "vehicles", allEntries = true)
     public void delete(Long id) {
+                Long garageId = garageContext.requireGarageId();
 
-        Vehicle vehicle = vehicleRepository.findById(id)
+                Vehicle vehicle = vehicleRepository.findByIdAndGarageId(id, garageId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Vehicle not found with ID: " + id

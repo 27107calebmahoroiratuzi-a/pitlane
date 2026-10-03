@@ -10,6 +10,7 @@ import rw.ac.auca.garagerepairshopmanagementsystem.model.*;
 import rw.ac.auca.garagerepairshopmanagementsystem.repository.RepairJobRepository;
 import rw.ac.auca.garagerepairshopmanagementsystem.repository.InvoiceRepository;
 import rw.ac.auca.garagerepairshopmanagementsystem.repository.VehicleRepository;
+import rw.ac.auca.garagerepairshopmanagementsystem.security.GarageContext;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,23 +21,25 @@ public class RepairJobService {
     private final RepairJobRepository repairJobRepository;
     private final VehicleRepository vehicleRepository;
         private final InvoiceRepository invoiceRepository;
+        private final GarageContext garageContext;
 
     public RepairJobService(
             RepairJobRepository repairJobRepository,
                         VehicleRepository vehicleRepository,
-                        InvoiceRepository invoiceRepository
+                        InvoiceRepository invoiceRepository,
+                        GarageContext garageContext
     ) {
         this.repairJobRepository = repairJobRepository;
         this.vehicleRepository = vehicleRepository;
                 this.invoiceRepository = invoiceRepository;
+                this.garageContext = garageContext;
     }
 
     @Transactional
     public RepairJobResponse create(RepairJobRequest request) {
 
-        Vehicle vehicle = vehicleRepository.findById(
-                request.getVehicleId()
-        ).orElseThrow(() ->
+        Long garageId = garageContext.requireGarageId();
+        Vehicle vehicle = vehicleRepository.findByIdAndGarageId(request.getVehicleId(), garageId).orElseThrow(() ->
                 new ResourceNotFoundException(
                         "Vehicle not found with ID: "
                                 + request.getVehicleId()
@@ -68,17 +71,19 @@ public class RepairJobService {
         return toResponse(repairJobRepository.save(job));
     }
 
-    public List<RepairJobResponse> findAll() {
+        @Transactional(readOnly = true)
+        public List<RepairJobResponse> findAll() {
 
-        return repairJobRepository.findAll()
+        return repairJobRepository.findAllByVehicleGarageId(garageContext.requireGarageId())
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
-    public RepairJobResponse findById(Long id) {
+        @Transactional(readOnly = true)
+        public RepairJobResponse findById(Long id) {
 
-        RepairJob job = repairJobRepository.findById(id)
+        RepairJob job = repairJobRepository.findByIdAndVehicleGarageId(id, garageContext.requireGarageId())
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Repair job not found with ID: " + id
@@ -93,19 +98,18 @@ public class RepairJobService {
             RepairJobRequest request
     ) {
 
-                if (invoiceRepository.existsByRepairJobId(id)) {
-                        throw new BusinessException("An invoiced repair job cannot be changed");
-                }
-
-        RepairJob job = repairJobRepository.findById(id)
+        Long garageId = garageContext.requireGarageId();
+        RepairJob job = repairJobRepository.findByIdAndVehicleGarageId(id, garageId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Repair job not found with ID: " + id
                         ));
 
-        Vehicle vehicle = vehicleRepository.findById(
-                request.getVehicleId()
-        ).orElseThrow(() ->
+        if (invoiceRepository.existsByRepairJobIdAndRepairJobVehicleGarageId(id, garageId)) {
+            throw new BusinessException("An invoiced repair job cannot be changed");
+        }
+
+        Vehicle vehicle = vehicleRepository.findByIdAndGarageId(request.getVehicleId(), garageId).orElseThrow(() ->
                 new ResourceNotFoundException(
                         "Vehicle not found with ID: "
                                 + request.getVehicleId()
@@ -145,15 +149,16 @@ public class RepairJobService {
     @Transactional
     public void delete(Long id) {
 
-                if (invoiceRepository.existsByRepairJobId(id)) {
-                        throw new BusinessException("An invoiced repair job cannot be deleted");
-                }
-
-        RepairJob job = repairJobRepository.findById(id)
+        Long garageId = garageContext.requireGarageId();
+        RepairJob job = repairJobRepository.findByIdAndVehicleGarageId(id, garageId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Repair job not found with ID: " + id
                         ));
+
+        if (invoiceRepository.existsByRepairJobIdAndRepairJobVehicleGarageId(id, garageId)) {
+            throw new BusinessException("An invoiced repair job cannot be deleted");
+        }
 
         Vehicle vehicle = job.getVehicle();
 

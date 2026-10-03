@@ -109,7 +109,14 @@ export type AuthSession = {
   username: string;
   roles: string[];
   message: string;
+  garageId: number | null;
+  garageName: string | null;
 };
+
+export type GarageInfo = { id: number; name: string; createdAt: string };
+export type InvitationInfo = { email: string; role: string; acceptanceUrl: string; expiresAt: string; message: string };
+export type GarageCreation = { garage: GarageInfo; adminInvitation: InvitationInfo };
+export type TeamMember = { id: number; username: string; email: string; role: string };
 
 const apiBase = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api").replace(/\/$/, "");
 const authStorageKey = "pitlane.auth";
@@ -137,8 +144,21 @@ export async function signIn(username: string, password: string): Promise<AuthSe
     method: "POST",
     body: JSON.stringify({ username, password }),
   });
-  window.sessionStorage.setItem(authStorageKey, JSON.stringify(session));
+  saveAuthSession(session);
   return session;
+}
+
+export async function acceptInvitation(token: string, username: string, password: string): Promise<AuthSession> {
+  const session = await apiRequest<AuthSession>("/auth/invitations/accept", {
+    method: "POST",
+    body: JSON.stringify({ token, username, password }),
+  });
+  saveAuthSession(session);
+  return session;
+}
+
+function saveAuthSession(session: AuthSession): void {
+  window.sessionStorage.setItem(authStorageKey, JSON.stringify(session));
 }
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {

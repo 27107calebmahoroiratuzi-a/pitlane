@@ -22,7 +22,7 @@ public class VehicleController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+        @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN','MANAGER')")
     public ResponseEntity<VehicleResponse> create(
             @Valid @RequestBody VehicleRequest request
     ) {
@@ -33,7 +33,7 @@ public class VehicleController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','STAFF','USER')")
+        @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN','MANAGER','STAFF','USER')")
     public ResponseEntity<List<VehicleResponse>> findAll() {
 
         return ResponseEntity.ok(
@@ -42,7 +42,7 @@ public class VehicleController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','STAFF','USER')")
+        @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN','MANAGER','STAFF','USER')")
     public ResponseEntity<VehicleResponse> findById(
             @PathVariable Long id
     ) {
@@ -53,7 +53,7 @@ public class VehicleController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+        @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN','MANAGER')")
     public ResponseEntity<VehicleResponse> update(
             @PathVariable Long id,
             @Valid @RequestBody VehicleRequest request
@@ -65,7 +65,7 @@ public class VehicleController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+        @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN')")
     public ResponseEntity<Void> delete(
             @PathVariable Long id
     ) {

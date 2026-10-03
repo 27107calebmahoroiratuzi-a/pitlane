@@ -3,6 +3,7 @@ package rw.ac.auca.garagerepairshopmanagementsystem.controller;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import rw.ac.auca.garagerepairshopmanagementsystem.dto.SparePartRequest;
 import rw.ac.auca.garagerepairshopmanagementsystem.dto.SparePartResponse;
@@ -20,6 +21,7 @@ public class SparePartController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN','MANAGER','STAFF')")
     public ResponseEntity<SparePartResponse> create(@Valid @RequestBody SparePartRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(sparePartService.create(request));
     }
@@ -31,11 +33,13 @@ public class SparePartController {
     public SparePartResponse findById(@PathVariable Long id) { return sparePartService.findById(id); }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN','MANAGER','STAFF')")
     public SparePartResponse update(@PathVariable Long id, @Valid @RequestBody SparePartRequest request) {
         return sparePartService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN','MANAGER')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         sparePartService.delete(id);
         return ResponseEntity.noContent().build();

@@ -9,6 +9,7 @@ import rw.ac.auca.garagerepairshopmanagementsystem.exception.ResourceNotFoundExc
 import rw.ac.auca.garagerepairshopmanagementsystem.model.Mechanic;
 import rw.ac.auca.garagerepairshopmanagementsystem.repository.MechanicRepository;
 import rw.ac.auca.garagerepairshopmanagementsystem.repository.RepairJobAssignmentRepository;
+import rw.ac.auca.garagerepairshopmanagementsystem.security.GarageContext;
 
 import java.util.List;
 
@@ -16,27 +17,32 @@ import java.util.List;
 public class MechanicService {
     private final MechanicRepository mechanicRepository;
     private final RepairJobAssignmentRepository assignmentRepository;
+    private final GarageContext garageContext;
 
     public MechanicService(MechanicRepository mechanicRepository,
-                           RepairJobAssignmentRepository assignmentRepository) {
+                           RepairJobAssignmentRepository assignmentRepository,
+                           GarageContext garageContext) {
         this.mechanicRepository = mechanicRepository;
         this.assignmentRepository = assignmentRepository;
+        this.garageContext = garageContext;
     }
 
     @Transactional
     public MechanicResponse create(MechanicRequest request) {
-        if (mechanicRepository.existsByEmail(request.getEmail())
-                || mechanicRepository.existsByPhone(request.getPhone())) {
+        Long garageId = garageContext.requireGarageId();
+        if (mechanicRepository.existsByEmailAndGarageId(request.getEmail(), garageId)
+            || mechanicRepository.existsByPhoneAndGarageId(request.getPhone(), garageId)) {
             throw new BusinessException("A mechanic with this email or phone already exists");
         }
         Mechanic mechanic = new Mechanic();
         apply(mechanic, request, true);
+        mechanic.setGarage(garageContext.requireGarage());
         return toResponse(mechanicRepository.save(mechanic));
     }
 
     @Transactional(readOnly = true)
     public List<MechanicResponse> findAll() {
-        return mechanicRepository.findAll().stream().map(this::toResponse).toList();
+        return mechanicRepository.findAllByGarageId(garageContext.requireGarageId()).stream().map(this::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
@@ -46,9 +52,10 @@ public class MechanicService {
 
     @Transactional
     public MechanicResponse update(Long id, MechanicRequest request) {
+        Long garageId = garageContext.requireGarageId();
         Mechanic mechanic = getMechanic(id);
-        if (mechanicRepository.existsByEmailAndIdNot(request.getEmail(), id)
-                || mechanicRepository.existsByPhoneAndIdNot(request.getPhone(), id)) {
+        if (mechanicRepository.existsByEmailAndIdNotAndGarageId(request.getEmail(), id, garageId)
+            || mechanicRepository.existsByPhoneAndIdNotAndGarageId(request.getPhone(), id, garageId)) {
             throw new BusinessException("A mechanic with this email or phone already exists");
         }
         apply(mechanic, request, false);
@@ -65,7 +72,7 @@ public class MechanicService {
     }
 
     private Mechanic getMechanic(Long id) {
-        return mechanicRepository.findById(id).orElseThrow(() ->
+        return mechanicRepository.findByIdAndGarageId(id, garageContext.requireGarageId()).orElseThrow(() ->
                 new ResourceNotFoundException("Mechanic not found with ID: " + id));
     }
 

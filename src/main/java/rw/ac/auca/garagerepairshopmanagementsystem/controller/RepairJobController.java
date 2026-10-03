@@ -24,7 +24,7 @@ public class RepairJobController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','STAFF')")
+        @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN','MANAGER','STAFF')")
     public ResponseEntity<RepairJobResponse> create(
             @Valid @RequestBody RepairJobRequest request
     ) {
@@ -35,7 +35,7 @@ public class RepairJobController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','STAFF','USER')")
+        @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN','MANAGER','STAFF','USER')")
     public ResponseEntity<List<RepairJobResponse>> findAll() {
 
         return ResponseEntity.ok(
@@ -44,7 +44,7 @@ public class RepairJobController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','STAFF','USER')")
+        @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN','MANAGER','STAFF','USER')")
     public ResponseEntity<RepairJobResponse> findById(
             @PathVariable Long id
     ) {
@@ -55,7 +55,7 @@ public class RepairJobController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','STAFF')")
+        @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN','MANAGER','STAFF')")
     public ResponseEntity<RepairJobResponse> update(
             @PathVariable Long id,
             @Valid @RequestBody RepairJobRequest request
@@ -67,7 +67,7 @@ public class RepairJobController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+        @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN')")
     public ResponseEntity<Void> delete(
             @PathVariable Long id
     ) {

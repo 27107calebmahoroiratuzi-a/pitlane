@@ -9,8 +9,8 @@ import java.util.UUID;
         name = "customers",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_customer_uuid", columnNames = "uuid"),
-                @UniqueConstraint(name = "uk_customer_email", columnNames = "email"),
-                @UniqueConstraint(name = "uk_customer_phone", columnNames = "phone")
+            @UniqueConstraint(name = "uk_customer_garage_email", columnNames = {"garage_id", "email"}),
+            @UniqueConstraint(name = "uk_customer_garage_phone", columnNames = {"garage_id", "phone"})
         }
 )
 public class Customer {
@@ -25,14 +25,18 @@ public class Customer {
     @Column(name = "full_name", nullable = false, length = 100)
     private String fullName;
 
-    @Column(nullable = false, unique = true, length = 30)
+    @Column(nullable = false, length = 30)
     private String phone;
 
-    @Column(nullable = false, unique = true, length = 150)
+    @Column(nullable = false, length = 150)
     private String email;
 
     @Column(length = 255)
     private String address;
+
+    @ManyToOne
+    @JoinColumn(name = "garage_id", foreignKey = @ForeignKey(name = "fk_customer_garage"))
+    private Garage garage;
 
     @PrePersist
     public void generateUuid() {
@@ -68,6 +72,10 @@ public class Customer {
         return address;
     }
 
+    public Garage getGarage() {
+        return garage;
+    }
+
     public void setId(Long id) {
         this.id = id;
     }
@@ -90,5 +98,9 @@ public class Customer {
 
     public void setAddress(String address) {
         this.address = address;
+    }
+
+    public void setGarage(Garage garage) {
+        this.garage = garage;
     }
 }

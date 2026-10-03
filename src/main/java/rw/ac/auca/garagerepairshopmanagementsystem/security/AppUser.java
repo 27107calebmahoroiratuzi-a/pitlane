@@ -1,6 +1,7 @@
 package rw.ac.auca.garagerepairshopmanagementsystem.security;
 
 import jakarta.persistence.*;
+import rw.ac.auca.garagerepairshopmanagementsystem.model.Garage;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -40,14 +41,23 @@ public class AppUser {
     @Column(nullable = false)
     private boolean enabled = true;
 
+    @ManyToOne
+    @JoinColumn(name = "garage_id", foreignKey = @ForeignKey(name = "fk_app_user_garage"))
+    private Garage garage;
+
     public AppUser() {
     }
 
     public AppUser(String username, String email, String password, Set<Role> roles) {
+        this(username, email, password, roles, null);
+    }
+
+    public AppUser(String username, String email, String password, Set<Role> roles, Garage garage) {
         this.username = username;
         this.email = email;
         this.password = password;
         this.roles = roles == null ? new HashSet<>() : new HashSet<>(roles);
+        this.garage = garage;
     }
 
     public Long getId() {
@@ -74,6 +84,10 @@ public class AppUser {
         return enabled;
     }
 
+    public Garage getGarage() {
+        return garage;
+    }
+
     public void setId(Long id) {
         this.id = id;
     }
@@ -96,5 +110,9 @@ public class AppUser {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+    }
+
+    public void setGarage(Garage garage) {
+        this.garage = garage;
     }
 }

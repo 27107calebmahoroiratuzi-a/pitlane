@@ -1,19 +1,19 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import {
-  Activity, ArrowDownRight, ArrowRight, Boxes, CarFront, Check, ChevronDown,
+  Activity, ArrowDownRight, ArrowRight, Boxes, Building2, CarFront, Check,
   CircleDollarSign, ClipboardList, Clock3, Gauge, LayoutDashboard, LoaderCircle,
-  LogOut, Menu, Plus, Search, Settings2, ShieldCheck, Trash2, UsersRound, Wrench, X,
+  LogOut, Menu, Plus, Search, Settings2, ShieldCheck, Trash2, UserPlus, UsersRound, Wrench, X,
 } from "lucide-react";
 import {
   apiRequest, authExpiredEvent, clearAuthSession, loadGarageData, readAuthSession, signIn,
-  type AuthSession, type Customer, type GarageData, type Invoice,
+  type AuthSession, type Customer, type GarageCreation, type GarageData, type GarageInfo, type InvitationInfo, type Invoice, type TeamMember,
   type JobAssignment, type JobPart, type Mechanic, type RepairJob, type SparePart, type Vehicle,
 } from "../api";
 import type { Route } from "./+types/home";
 
-type Section = "overview" | "jobs" | "customers" | "vehicles" | "mechanics" | "inventory" | "invoices";
+type Section = "overview" | "jobs" | "customers" | "vehicles" | "mechanics" | "inventory" | "invoices" | "team";
 type Editable = Customer | Vehicle | Mechanic | SparePart | RepairJob;
-type Editor = { section: Exclude<Section, "overview" | "invoices">; item?: Editable };
+type Editor = { section: Exclude<Section, "overview" | "invoices" | "team">; item?: Editable };
 type FieldOption = { value: string | number; label: string };
 type Field = { name: string; label: string; type?: string; required?: boolean; options?: FieldOption[] };
 type TableRow = { id: number; cells: ReactNode; record?: Editable };
@@ -26,11 +26,12 @@ const navigation: { id: Section; label: string; icon: typeof LayoutDashboard }[]
   { id: "mechanics", label: "Mechanics", icon: Wrench },
   { id: "inventory", label: "Parts inventory", icon: Boxes },
   { id: "invoices", label: "Invoices", icon: CircleDollarSign },
+  { id: "team", label: "Team access", icon: UserPlus },
 ];
 
 const titles: Record<Section, string> = {
   overview: "Workshop overview", jobs: "Repair jobs", customers: "Customers", vehicles: "Vehicles",
-  mechanics: "Mechanics", inventory: "Parts inventory", invoices: "Invoices & payments",
+  mechanics: "Mechanics", inventory: "Parts inventory", invoices: "Invoices & payments", team: "Team access",
 };
 
 const resourcePaths: Partial<Record<Section, string>> = {
@@ -97,6 +98,10 @@ export default function Home() {
       setLoading(false);
       return;
     }
+    if (session.roles.includes("SYSTEM_ADMIN") || !session.garageId) {
+      setLoading(false);
+      return;
+    }
     void refreshData();
   }, [sessionReady, session?.token]);
 
@@ -143,7 +148,7 @@ export default function Home() {
   }
 
   function openCreate(section = activeSection) {
-    if (section !== "overview" && section !== "invoices") setEditor({ section });
+    if (section !== "overview" && section !== "invoices" && section !== "team") setEditor({ section });
   }
 
   async function handleSignIn(username: string, password: string) {
@@ -275,29 +280,33 @@ export default function Home() {
   const lowStockCount = data.parts.filter((part) => part.lowStock).length;
   const totalBalance = data.invoices.reduce((sum, invoice) => sum + invoice.balanceDue, 0);
   const today = new Date();
+  const isSystemAdmin = session?.roles.includes("SYSTEM_ADMIN") ?? false;
+  const canManageTeam = Boolean(session?.roles.some((role) => ["GARAGE_ADMIN", "ADMIN", "MANAGER", "STAFF"].includes(role)));
 
   if (!sessionReady) {
     return <div className="auth-loading"><LoaderCircle size={20} className="spin" /><span>Loading session</span></div>;
   }
   if (!session) return <LoginScreen onSignIn={handleSignIn} notice={error} />;
+  if (isSystemAdmin) return <PlatformAdminScreen session={session} onSignOut={handleSignOut} />;
+  if (!session.garageId) return <LoginScreen onSignIn={handleSignIn} notice="Your account is not assigned to a garage. Ask a system administrator for an invitation." />;
 
   return <div className="app-frame">
     <aside className={`sidebar ${mobileNavOpen ? "sidebar-open" : ""}`}>
       <div className="brand-lockup"><div className="brand-mark"><Gauge size={21} strokeWidth={2.3} /></div><div><strong>pitlane</strong><span>GARAGE OPERATIONS</span></div><button className="icon-button nav-close" aria-label="Close navigation" onClick={() => setMobileNavOpen(false)}><X size={19} /></button></div>
-      <div className="shop-switcher"><div className="shop-avatar">K</div><div className="shop-switcher-copy"><strong>Kigali Auto Works</strong><span>Workshop · Kigali</span></div><ChevronDown size={15} /></div>
+      <div className="shop-switcher"><div className="shop-avatar">{(session.garageName || "G").slice(0, 1).toUpperCase()}</div><div className="shop-switcher-copy"><strong>{session.garageName}</strong><span>Garage workspace</span></div><Building2 size={15} /></div>
       <div className="nav-caption">WORKSPACE</div>
-      <nav className="main-nav" aria-label="Main navigation">{navigation.map(({ id, label, icon: Icon }) => <button key={id} className={`nav-item ${activeSection === id ? "nav-item-active" : ""}`} onClick={() => { setActiveSection(id); setMobileNavOpen(false); setSearch(""); }}><Icon size={18} strokeWidth={1.9} /><span>{label}</span>{id === "jobs" && activeCount > 0 && <span className="nav-count">{activeCount}</span>}{id === "inventory" && lowStockCount > 0 && <span className="nav-alert">{lowStockCount}</span>}</button>)}</nav>
+      <nav className="main-nav" aria-label="Main navigation">{navigation.filter(({ id }) => id !== "team" || canManageTeam).map(({ id, label, icon: Icon }) => <button key={id} className={`nav-item ${activeSection === id ? "nav-item-active" : ""}`} onClick={() => { setActiveSection(id); setMobileNavOpen(false); setSearch(""); }}><Icon size={18} strokeWidth={1.9} /><span>{label}</span>{id === "jobs" && activeCount > 0 && <span className="nav-count">{activeCount}</span>}{id === "inventory" && lowStockCount > 0 && <span className="nav-alert">{lowStockCount}</span>}</button>)}</nav>
       <div className="sidebar-bottom"><div className="online-indicator"><span /> API connection <b>{loading ? "CONNECTING" : error ? "OFFLINE" : "READY"}</b></div><button className="nav-item settings-item" onClick={() => setNotice("Workshop settings are managed by your administrator.")}><Settings2 size={18} /><span>Settings</span></button><div className="user-profile"><div className="user-avatar">{session.username.slice(0, 2).toUpperCase()}</div><div><strong>{session.username}</strong><span>{session.roles.join(" · ")}</span></div><button className="icon-button logout-button" title="Sign out" aria-label="Sign out" onClick={handleSignOut}><LogOut size={15} /></button></div></div>
     </aside>
     {mobileNavOpen && <button className="mobile-scrim" aria-label="Close navigation" onClick={() => setMobileNavOpen(false)} />}
 
     <main className="main-shell">
-      <header className="topbar"><div className="topbar-left"><button className="icon-button mobile-menu" aria-label="Open navigation" onClick={() => setMobileNavOpen(true)}><Menu size={20} /></button><div className="breadcrumb"><span>Workspace</span><ArrowRight size={13} /><strong>{titles[activeSection]}</strong></div></div><div className="topbar-right"><div className="today-label"><span>{new Intl.DateTimeFormat("en", { weekday: "long" }).format(today).toUpperCase()}</span><strong>{new Intl.DateTimeFormat("en", { day: "2-digit", month: "short", year: "numeric" }).format(today).toUpperCase()}</strong></div><div className="topbar-avatar">KM</div></div></header>
+      <header className="topbar"><div className="topbar-left"><button className="icon-button mobile-menu" aria-label="Open navigation" onClick={() => setMobileNavOpen(true)}><Menu size={20} /></button><div className="breadcrumb"><span>{session.garageName}</span><ArrowRight size={13} /><strong>{titles[activeSection]}</strong></div></div><div className="topbar-right"><div className="today-label"><span>{new Intl.DateTimeFormat("en", { weekday: "long" }).format(today).toUpperCase()}</span><strong>{new Intl.DateTimeFormat("en", { day: "2-digit", month: "short", year: "numeric" }).format(today).toUpperCase()}</strong></div><div className="topbar-avatar">{session.username.slice(0, 2).toUpperCase()}</div></div></header>
       <section className="page-content">
-        <div className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line" /> SERVICE DESK <span className="eyebrow-dot">/</span> {activeSection.toUpperCase()}</div><h1>{titles[activeSection]}</h1><p>{sectionDescription(activeSection)}</p></div><div className="heading-actions">{activeSection !== "overview" && activeSection !== "invoices" && <button className="button button-primary" onClick={() => openCreate()}><Plus size={17} /> Add {singularTitle(activeSection)}</button>}{activeSection === "overview" && <button className="button button-primary" onClick={() => openCreate("jobs")}><Plus size={17} /> New repair job</button>}</div></div>
+        <div className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line" /> SERVICE DESK <span className="eyebrow-dot">/</span> {activeSection.toUpperCase()}</div><h1>{titles[activeSection]}</h1><p>{sectionDescription(activeSection)}</p></div><div className="heading-actions">{activeSection !== "overview" && activeSection !== "invoices" && activeSection !== "team" && <button className="button button-primary" onClick={() => openCreate()}><Plus size={17} /> Add {singularTitle(activeSection)}</button>}{activeSection === "overview" && <button className="button button-primary" onClick={() => openCreate("jobs")}><Plus size={17} /> New repair job</button>}</div></div>
         {error && <div className="alert alert-error"><Activity size={17} /><span>{error}{error.toLowerCase().includes("fetch") ? " · Check that the Spring Boot API is running on port 8080." : ""}</span><button className="icon-button" onClick={() => setError("")} aria-label="Dismiss error"><X size={16} /></button></div>}
         {notice && <div className="alert alert-success"><Check size={17} /><span>{notice}</span><button className="icon-button" onClick={() => setNotice("")} aria-label="Dismiss notification"><X size={16} /></button></div>}
-        {activeSection === "overview" ? <Overview data={data} loading={loading} onOpenJobs={() => setActiveSection("jobs")} onOpenInventory={() => setActiveSection("inventory")} onOpenInvoices={() => setActiveSection("invoices")} onManageJob={setSelectedJob} /> : <ResourceTable section={activeSection} data={data} search={search} setSearch={setSearch} loading={loading} rows={{ customers, vehicles, mechanics, parts, jobs, invoices }} onEdit={(section, item) => setEditor({ section, item })} onDelete={deleteRecord} onManageJob={setSelectedJob} onPay={setSelectedInvoice} />}
+        {activeSection === "overview" ? <Overview data={data} loading={loading} onOpenJobs={() => setActiveSection("jobs")} onOpenInventory={() => setActiveSection("inventory")} onOpenInvoices={() => setActiveSection("invoices")} onManageJob={setSelectedJob} /> : activeSection === "team" ? <TeamPanel session={session} /> : <ResourceTable section={activeSection} data={data} search={search} setSearch={setSearch} loading={loading} rows={{ customers, vehicles, mechanics, parts, jobs, invoices }} onEdit={(section, item) => setEditor({ section, item })} onDelete={deleteRecord} onManageJob={setSelectedJob} onPay={setSelectedInvoice} />}
       </section>
       <footer className="page-footer"><span><ShieldCheck size={14} /> Workshop data stays in your garage system</span><span>PITLANE <i>·</i> OPERATIONS</span></footer>
     </main>
@@ -305,6 +314,114 @@ export default function Home() {
     {editor && <EditorDialog editor={editor} data={data} working={working} onClose={() => setEditor(null)} onSubmit={submitEditor} />}
     {selectedJob && <JobDialog job={selectedJob} mechanics={data.mechanics.filter((row) => row.active)} parts={data.parts} assignments={assignments} jobParts={jobParts} hasInvoice={data.invoices.some((invoice) => invoice.repairJobId === selectedJob.id)} working={working} onClose={() => setSelectedJob(null)} onAssign={submitAssignment} onAddPart={submitPartUsage} onIssueInvoice={() => void issueInvoice()} onRemovePart={(usageId) => void perform(async () => { await apiRequest(`/repair-jobs/${selectedJob.id}/parts/${usageId}`, { method: "DELETE" }); await refreshJobDetails(selectedJob.id); }, "Part returned to stock")} />}
     {selectedInvoice && <PaymentDialog invoice={selectedInvoice} working={working} onClose={() => setSelectedInvoice(null)} onSubmit={submitPayment} />}
+  </div>;
+}
+
+function PlatformAdminScreen({ session, onSignOut }: { session: AuthSession; onSignOut: () => void }) {
+  const [garages, setGarages] = useState<GarageInfo[]>([]);
+  const [invitation, setInvitation] = useState<InvitationInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [working, setWorking] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    apiRequest<GarageInfo[]>("/system/garages")
+      .then(setGarages)
+      .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "Unable to load garages"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function createGarage(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    setWorking(true);
+    setError("");
+    setInvitation(null);
+    try {
+      const created = await apiRequest<GarageCreation>("/system/garages", {
+        method: "POST",
+        body: JSON.stringify({ name: form.get("name"), adminEmail: form.get("adminEmail") }),
+      });
+      setGarages((current) => [created.garage, ...current]);
+      setInvitation(created.adminInvitation);
+      formElement.reset();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Garage could not be created");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  return <div className="app-frame">
+    <aside className="sidebar">
+      <div className="brand-lockup"><div className="brand-mark"><Gauge size={21} strokeWidth={2.3} /></div><div><strong>pitlane</strong><span>PLATFORM CONTROL</span></div></div>
+      <div className="shop-switcher"><div className="shop-avatar">P</div><div className="shop-switcher-copy"><strong>Platform administration</strong><span>All garages</span></div><Building2 size={15} /></div>
+      <div className="nav-caption">ADMINISTRATION</div>
+      <nav className="main-nav" aria-label="Platform administration"><div className="nav-item nav-item-active"><Building2 size={18} /><span>Garages</span></div></nav>
+      <div className="sidebar-bottom"><div className="user-profile"><div className="user-avatar">{session.username.slice(0, 2).toUpperCase()}</div><div><strong>{session.username}</strong><span>SYSTEM ADMIN</span></div><button className="icon-button logout-button" title="Sign out" aria-label="Sign out" onClick={onSignOut}><LogOut size={15} /></button></div></div>
+    </aside>
+    <main className="main-shell">
+      <header className="topbar"><div className="breadcrumb"><span>Platform</span><ArrowRight size={13} /><strong>Garages</strong></div><div className="topbar-avatar">{session.username.slice(0, 2).toUpperCase()}</div></header>
+      <section className="page-content">
+        <div className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line" /> PLATFORM <span className="eyebrow-dot">/</span> TENANTS</div><h1>Garage network</h1><p>Create garages and invite their first administrator.</p></div></div>
+        {error && <div className="alert alert-error" role="alert"><Activity size={16} /><span>{error}</span></div>}
+        {invitation && <div className="invite-result"><div><span className="section-kicker">GARAGE ADMIN INVITED</span><strong>{invitation.email} · {invitation.role}</strong><span>Notification event submitted. Share this one-time link if no email delivery service is configured.</span></div><a className="button button-secondary" href={invitation.acceptanceUrl}>Open invite <ArrowRight size={14} /></a></div>}
+        <div className="admin-layout">
+          <section className="dashboard-panel admin-form-panel"><div className="panel-heading"><div><span className="section-kicker">NEW TENANT</span><h2>Create garage</h2></div></div><form className="admin-form" onSubmit={createGarage}><label className="form-field">Garage name<input name="name" maxLength={120} required /></label><label className="form-field">First admin email<input name="adminEmail" type="email" maxLength={150} required /></label><button className="button button-primary" type="submit" disabled={working}>{working && <LoaderCircle size={15} className="spin" />}{working ? "Creating garage" : "Create & invite admin"}<ArrowRight size={15} /></button></form></section>
+          <section className="dashboard-panel tenant-list-panel"><div className="panel-heading"><div><span className="section-kicker">NETWORK</span><h2>Registered garages</h2></div><span className="tenant-count">{garages.length}</span></div>{loading ? <div className="loading-state"><LoaderCircle size={20} className="spin" /> Loading garages</div> : garages.length === 0 ? <div className="empty-compact"><Building2 size={19} /><span>No garages created yet</span></div> : <div className="tenant-list">{garages.map((garage) => <div className="tenant-row" key={garage.id}><div className="shop-avatar"><Building2 size={15} /></div><div><strong>{garage.name}</strong><span>Created {dateLabel(garage.createdAt)}</span></div><span className="status status-paid">ACTIVE</span></div>)}</div>}</section>
+        </div>
+      </section>
+      <footer className="page-footer"><span><ShieldCheck size={14} /> Platform administration</span><span>PITLANE <i>·</i> GARAGE NETWORK</span></footer>
+    </main>
+  </div>;
+}
+
+function TeamPanel({ session }: { session: AuthSession }) {
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [working, setWorking] = useState(false);
+  const [error, setError] = useState("");
+  const [invitation, setInvitation] = useState<InvitationInfo | null>(null);
+  const roles = session.roles.includes("GARAGE_ADMIN") || session.roles.includes("ADMIN")
+    ? ["MANAGER", "STAFF", "USER"]
+    : session.roles.includes("MANAGER") ? ["STAFF", "USER"]
+      : session.roles.includes("STAFF") ? ["USER"] : [];
+
+  useEffect(() => {
+    apiRequest<TeamMember[]>("/garages/me/users")
+      .then(setMembers)
+      .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "Unable to load garage team"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function invite(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    setWorking(true);
+    setError("");
+    setInvitation(null);
+    try {
+      setInvitation(await apiRequest<InvitationInfo>("/garages/me/invitations", {
+        method: "POST",
+        body: JSON.stringify({ email: form.get("email"), role: form.get("role") }),
+      }));
+      formElement.reset();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Invitation could not be created");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  return <div className="team-layout">
+    <section className="dashboard-panel team-list-panel"><div className="panel-heading"><div><span className="section-kicker">{session.garageName}</span><h2>Garage team</h2></div><span className="tenant-count">{members.length}</span></div>
+      {loading ? <div className="loading-state"><LoaderCircle size={20} className="spin" /> Loading team</div> : <div className="tenant-list">{members.map((member) => <div className="tenant-row" key={member.id}><div className="user-avatar">{member.username.slice(0, 2).toUpperCase()}</div><div><strong>{member.username}</strong><span>{member.email}</span></div><span className="status status-in-progress">{member.role}</span></div>)}</div>}
+    </section>
+    {roles.length > 0 && <section className="dashboard-panel admin-form-panel"><div className="panel-heading"><div><span className="section-kicker">ROLE-BASED ACCESS</span><h2>Invite team member</h2></div></div><p className="team-guidance">You can invite users below your role for this garage only.</p><form className="admin-form" onSubmit={invite}><label className="form-field">Email address<input name="email" type="email" maxLength={150} required /></label><label className="form-field">Role<select name="role" required defaultValue=""><option value="" disabled>Select role</option>{roles.map((role) => <option key={role} value={role}>{role.replaceAll("_", " ")}</option>)}</select></label><button className="button button-primary" type="submit" disabled={working}>{working && <LoaderCircle size={15} className="spin" />}{working ? "Creating invitation" : "Create invitation"}<UserPlus size={15} /></button></form></section>}
+    {error && <div className="alert alert-error team-alert" role="alert"><Activity size={16} /><span>{error}</span></div>}
+    {invitation && <div className="invite-result team-invite-result"><div><span className="section-kicker">INVITATION CREATED</span><strong>{invitation.email} · {invitation.role}</strong><span>Notification event submitted. Share the link if email delivery is not configured.</span></div><a className="button button-secondary" href={invitation.acceptanceUrl}>Open invite <ArrowRight size={14} /></a></div>}
   </div>;
 }
 
@@ -333,13 +450,7 @@ function LoginScreen({ onSignIn, notice }: { onSignIn: (username: string, passwo
         <div className="auth-brand-message">
           <span className="auth-brand-kicker">SERVICE DESK <i /></span>
           <h1>Every repair<br /><em>has a next move.</em></h1>
-          <div className="auth-brand-illustration" aria-hidden="true">
-            <span className="auth-bay-number">BAY 03</span>
-            <div className="auth-bay-guides"><i /><i /><i /></div>
-            <CarFront className="auth-car-icon" size={94} strokeWidth={1.1} />
-            <span className="auth-bay-signal" />
-          </div>
-          <p>Kigali Auto Works <span>·</span> Kigali, Rwanda</p>
+          <p>One platform for independent garages.</p>
         </div>
         <div className="auth-brand-bottom"><span>GARAGE OPERATIONS</span><div><i /> WORKSHOP SYSTEM</div></div>
       </aside>
@@ -462,9 +573,9 @@ function inputValue(value: unknown, field: Field) {
 }
 
 function singularTitle(section: Section) {
-  return ({ jobs: "Repair job", customers: "Customer", vehicles: "Vehicle", mechanics: "Mechanic", inventory: "Spare part", invoices: "Invoice", overview: "Record" })[section];
+  return ({ jobs: "Repair job", customers: "Customer", vehicles: "Vehicle", mechanics: "Mechanic", inventory: "Spare part", invoices: "Invoice", overview: "Record", team: "Team member" })[section];
 }
 
 function sectionDescription(section: Section) {
-  return ({ overview: "Your workshop at a glance.", jobs: "Track work orders from check-in through pickup.", customers: "Keep customer contacts and vehicle ownership together.", vehicles: "Browse the vehicles currently known to your workshop.", mechanics: "Manage technician availability and job assignments.", inventory: "Monitor stock, prices, and parts used on repair jobs.", invoices: "Review repair charges, payments, and balances due." })[section];
+  return ({ overview: "Your workshop at a glance.", jobs: "Track work orders from check-in through pickup.", customers: "Keep customer contacts and vehicle ownership together.", vehicles: "Browse the vehicles currently known to your workshop.", mechanics: "Manage technician availability and job assignments.", inventory: "Monitor stock, prices, and parts used on repair jobs.", invoices: "Review repair charges, payments, and balances due.", team: "Invite and manage access for your garage team." })[section];
 }

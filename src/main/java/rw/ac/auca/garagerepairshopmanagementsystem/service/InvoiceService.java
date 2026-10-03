@@ -9,6 +9,7 @@ import rw.ac.auca.garagerepairshopmanagementsystem.exception.BusinessException;
 import rw.ac.auca.garagerepairshopmanagementsystem.exception.ResourceNotFoundException;
 import rw.ac.auca.garagerepairshopmanagementsystem.model.*;
 import rw.ac.auca.garagerepairshopmanagementsystem.repository.*;
+import rw.ac.auca.garagerepairshopmanagementsystem.security.GarageContext;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -20,25 +21,29 @@ public class InvoiceService {
     private final RepairJobRepository repairJobRepository;
     private final RepairJobPartRepository repairJobPartRepository;
     private final PaymentRepository paymentRepository;
+    private final GarageContext garageContext;
 
     public InvoiceService(InvoiceRepository invoiceRepository,
                           RepairJobRepository repairJobRepository,
                           RepairJobPartRepository repairJobPartRepository,
-                          PaymentRepository paymentRepository) {
+                          PaymentRepository paymentRepository,
+                          GarageContext garageContext) {
         this.invoiceRepository = invoiceRepository;
         this.repairJobRepository = repairJobRepository;
         this.repairJobPartRepository = repairJobPartRepository;
         this.paymentRepository = paymentRepository;
+        this.garageContext = garageContext;
     }
 
     @Transactional
     public InvoiceResponse issueForRepairJob(Long repairJobId) {
-        RepairJob job = repairJobRepository.findById(repairJobId).orElseThrow(() ->
+        Long garageId = garageContext.requireGarageId();
+        RepairJob job = repairJobRepository.findByIdAndVehicleGarageId(repairJobId, garageId).orElseThrow(() ->
                 new ResourceNotFoundException("Repair job not found with ID: " + repairJobId));
         if (job.getStatus() != RepairJobStatus.COMPLETED) {
             throw new BusinessException("Only completed repair jobs can be invoiced");
         }
-        if (invoiceRepository.existsByRepairJobId(repairJobId)) {
+        if (invoiceRepository.existsByRepairJobIdAndRepairJobVehicleGarageId(repairJobId, garageId)) {
             throw new BusinessException("An invoice already exists for this repair job");
         }
         BigDecimal partsAmount = repairJobPartRepository.findByRepairJobId(repairJobId).stream()
@@ -56,7 +61,7 @@ public class InvoiceService {
 
     @Transactional(readOnly = true)
     public List<InvoiceResponse> findAll() {
-        return invoiceRepository.findAll().stream().map(this::toResponse).toList();
+        return invoiceRepository.findAllByRepairJobVehicleGarageId(garageContext.requireGarageId()).stream().map(this::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
@@ -66,7 +71,7 @@ public class InvoiceService {
 
     @Transactional
     public InvoiceResponse recordPayment(Long invoiceId, PaymentRequest request) {
-        Invoice invoice = invoiceRepository.findByIdForUpdate(invoiceId).orElseThrow(() ->
+        Invoice invoice = invoiceRepository.findByIdForUpdateAndGarageId(invoiceId, garageContext.requireGarageId()).orElseThrow(() ->
             new ResourceNotFoundException("Invoice not found with ID: " + invoiceId));
         BigDecimal alreadyPaid = paymentRepository.sumAmountByInvoiceId(invoiceId);
         if (request.getAmount().compareTo(invoice.getTotalAmount().subtract(alreadyPaid)) > 0) {
@@ -86,7 +91,7 @@ public class InvoiceService {
     }
 
     private Invoice getInvoice(Long id) {
-        return invoiceRepository.findById(id).orElseThrow(() ->
+        return invoiceRepository.findByIdAndRepairJobVehicleGarageId(id, garageContext.requireGarageId()).orElseThrow(() ->
                 new ResourceNotFoundException("Invoice not found with ID: " + id));
     }
 

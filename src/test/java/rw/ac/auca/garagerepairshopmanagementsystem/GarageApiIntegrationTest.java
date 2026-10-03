@@ -26,15 +26,17 @@ import rw.ac.auca.garagerepairshopmanagementsystem.dto.RepairJobRequest;
 import rw.ac.auca.garagerepairshopmanagementsystem.dto.RepairJobPartRequest;
 import rw.ac.auca.garagerepairshopmanagementsystem.dto.SparePartRequest;
 import rw.ac.auca.garagerepairshopmanagementsystem.dto.VehicleRequest;
+import rw.ac.auca.garagerepairshopmanagementsystem.model.Garage;
 import rw.ac.auca.garagerepairshopmanagementsystem.model.RepairJobStatus;
 import rw.ac.auca.garagerepairshopmanagementsystem.security.AppUser;
 import rw.ac.auca.garagerepairshopmanagementsystem.security.AppUserRepository;
 import rw.ac.auca.garagerepairshopmanagementsystem.security.AuthRequest;
 import rw.ac.auca.garagerepairshopmanagementsystem.security.Role;
+import rw.ac.auca.garagerepairshopmanagementsystem.repository.GarageRepository;
 
 import java.util.Set;
 
-@SpringBootTest
+@SpringBootTest(properties = "spring.jpa.open-in-view=false")
 @AutoConfigureMockMvc
 class GarageApiIntegrationTest {
 
@@ -46,6 +48,9 @@ class GarageApiIntegrationTest {
 
         @Autowired
         private AppUserRepository appUserRepository;
+
+        @Autowired
+        private GarageRepository garageRepository;
 
         @Autowired
         private PasswordEncoder passwordEncoder;
@@ -118,6 +123,10 @@ class GarageApiIntegrationTest {
         mockMvc.perform(authorized(get("/api/vehicles/" + vehicleId), bearerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.model").value("Corolla"));
+
+        mockMvc.perform(authorized(get("/api/vehicles"), bearerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(vehicleId));
 
         MechanicRequest mechanicRequest = new MechanicRequest();
         mechanicRequest.setFullName("Jean Mugisha");
@@ -211,11 +220,13 @@ class GarageApiIntegrationTest {
 
     private String registerAdminToken() throws Exception {
         String password = "TestAdminPassword123!";
+        Garage garage = garageRepository.save(new Garage("Test Garage"));
         appUserRepository.save(new AppUser(
                 "garageadmin",
                 "garageadmin@example.com",
                 passwordEncoder.encode(password),
-                Set.of(Role.ADMIN)
+                Set.of(Role.GARAGE_ADMIN),
+                garage
         ));
 
         MvcResult result = mockMvc.perform(post("/api/auth/login")

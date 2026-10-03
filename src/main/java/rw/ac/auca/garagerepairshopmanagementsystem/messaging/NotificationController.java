@@ -21,7 +21,7 @@ public class NotificationController {
     }
 
     @PostMapping("/notifications")
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN','MANAGER')")
     public ResponseEntity<Map<String, String>> sendNotification(@Valid @RequestBody NotificationRequest request) {
         notificationService.notifyEvent(
                 request.eventType(),

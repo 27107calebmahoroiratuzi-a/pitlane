@@ -10,6 +10,7 @@ import rw.ac.auca.garagerepairshopmanagementsystem.exception.BusinessException;
 import rw.ac.auca.garagerepairshopmanagementsystem.exception.ResourceNotFoundException;
 import rw.ac.auca.garagerepairshopmanagementsystem.model.Customer;
 import rw.ac.auca.garagerepairshopmanagementsystem.repository.CustomerRepository;
+import rw.ac.auca.garagerepairshopmanagementsystem.security.GarageContext;
 
 import java.util.List;
 
@@ -17,20 +18,23 @@ import java.util.List;
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
+    private final GarageContext garageContext;
 
-    public CustomerService(CustomerRepository customerRepository) {
+    public CustomerService(CustomerRepository customerRepository, GarageContext garageContext) {
         this.customerRepository = customerRepository;
+        this.garageContext = garageContext;
     }
 
     @Transactional
     @CacheEvict(value = "customers", allEntries = true)
     public CustomerResponse create(CustomerRequest request) {
+        Long garageId = garageContext.requireGarageId();
 
-        if (customerRepository.existsByEmail(request.getEmail())) {
+        if (customerRepository.existsByEmailAndGarageId(request.getEmail(), garageId)) {
             throw new BusinessException("Email already exists");
         }
 
-        if (customerRepository.existsByPhone(request.getPhone())) {
+        if (customerRepository.existsByPhoneAndGarageId(request.getPhone(), garageId)) {
             throw new BusinessException("Phone number already exists");
         }
 
@@ -40,23 +44,24 @@ public class CustomerService {
         customer.setPhone(request.getPhone());
         customer.setEmail(request.getEmail());
         customer.setAddress(request.getAddress());
+        customer.setGarage(garageContext.requireGarage());
 
         return toResponse(customerRepository.save(customer));
     }
 
-    @Cacheable(value = "customers", key = "'all'")
+    @Cacheable(value = "customers", key = "@garageContext.requireGarageId()")
     public List<CustomerResponse> findAll() {
 
-        return customerRepository.findAll()
+        return customerRepository.findAllByGarageId(garageContext.requireGarageId())
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
-    @Cacheable(value = "customers", key = "#id")
+    @Cacheable(value = "customers", key = "#id + ':' + @garageContext.requireGarageId()")
     public CustomerResponse findById(Long id) {
 
-        Customer customer = customerRepository.findById(id)
+        Customer customer = customerRepository.findByIdAndGarageId(id, garageContext.requireGarageId())
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Customer not found with ID: " + id
@@ -68,20 +73,21 @@ public class CustomerService {
     @Transactional
     @CacheEvict(value = "customers", allEntries = true)
     public CustomerResponse update(Long id, CustomerRequest request) {
+        Long garageId = garageContext.requireGarageId();
 
-        Customer customer = customerRepository.findById(id)
+        Customer customer = customerRepository.findByIdAndGarageId(id, garageId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Customer not found with ID: " + id
                         ));
 
-        if (customerRepository.existsByEmailAndIdNot(
-                request.getEmail(), id)) {
+        if (customerRepository.existsByEmailAndIdNotAndGarageId(
+                request.getEmail(), id, garageId)) {
             throw new BusinessException("Email already exists");
         }
 
-        if (customerRepository.existsByPhoneAndIdNot(
-                request.getPhone(), id)) {
+        if (customerRepository.existsByPhoneAndIdNotAndGarageId(
+                request.getPhone(), id, garageId)) {
             throw new BusinessException("Phone number already exists");
         }
 
@@ -96,8 +102,9 @@ public class CustomerService {
     @Transactional
     @CacheEvict(value = "customers", allEntries = true)
     public void delete(Long id) {
+        Long garageId = garageContext.requireGarageId();
 
-        Customer customer = customerRepository.findById(id)
+        Customer customer = customerRepository.findByIdAndGarageId(id, garageId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Customer not found with ID: " + id

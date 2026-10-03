@@ -3,6 +3,7 @@ package rw.ac.auca.garagerepairshopmanagementsystem.controller;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import rw.ac.auca.garagerepairshopmanagementsystem.dto.InvoiceResponse;
 import rw.ac.auca.garagerepairshopmanagementsystem.dto.PaymentRequest;
@@ -26,6 +27,7 @@ public class InvoiceController {
     public InvoiceResponse findById(@PathVariable Long id) { return invoiceService.findById(id); }
 
     @PostMapping("/{id}/payments")
+    @PreAuthorize("hasAnyRole('GARAGE_ADMIN','ADMIN','MANAGER','STAFF')")
     public ResponseEntity<InvoiceResponse> recordPayment(@PathVariable Long id,
                                                           @Valid @RequestBody PaymentRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(invoiceService.recordPayment(id, request));
