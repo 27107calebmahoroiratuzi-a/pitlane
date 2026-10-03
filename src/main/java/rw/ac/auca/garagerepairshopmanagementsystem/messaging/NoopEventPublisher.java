@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
-@ConditionalOnProperty(prefix = "app.messaging.rabbitmq", name = "enabled", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "app.messaging.rabbitmq", name = "enabled", havingValue = "false", matchIfMissing = true)
 public class NoopEventPublisher implements EventPublisher {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NoopEventPublisher.class);

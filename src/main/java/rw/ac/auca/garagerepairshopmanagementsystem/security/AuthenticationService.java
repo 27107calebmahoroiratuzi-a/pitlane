@@ -35,15 +35,11 @@ public class AuthenticationService {
             throw new IllegalArgumentException("Email already exists");
         }
 
-        Set<Role> roles = request.roles() == null || request.roles().isEmpty()
-                ? Set.of(Role.USER)
-                : request.roles();
-
         AppUser appUser = new AppUser(
                 request.username(),
                 request.email(),
                 passwordEncoder.encode(request.password()),
-                roles
+            Set.of(Role.USER)
         );
 
         appUserRepository.save(appUser);

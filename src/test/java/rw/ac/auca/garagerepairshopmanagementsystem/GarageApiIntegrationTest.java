@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -26,7 +27,9 @@ import rw.ac.auca.garagerepairshopmanagementsystem.dto.RepairJobPartRequest;
 import rw.ac.auca.garagerepairshopmanagementsystem.dto.SparePartRequest;
 import rw.ac.auca.garagerepairshopmanagementsystem.dto.VehicleRequest;
 import rw.ac.auca.garagerepairshopmanagementsystem.model.RepairJobStatus;
-import rw.ac.auca.garagerepairshopmanagementsystem.security.RegisterRequest;
+import rw.ac.auca.garagerepairshopmanagementsystem.security.AppUser;
+import rw.ac.auca.garagerepairshopmanagementsystem.security.AppUserRepository;
+import rw.ac.auca.garagerepairshopmanagementsystem.security.AuthRequest;
 import rw.ac.auca.garagerepairshopmanagementsystem.security.Role;
 
 import java.util.Set;
@@ -40,6 +43,12 @@ class GarageApiIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+        @Autowired
+        private AppUserRepository appUserRepository;
+
+        @Autowired
+        private PasswordEncoder passwordEncoder;
 
     @Test
     void garageWorkflow_shouldCreateCustomerVehicleAndRepairJob() throws Exception {
@@ -201,17 +210,18 @@ class GarageApiIntegrationTest {
     }
 
     private String registerAdminToken() throws Exception {
-        RegisterRequest request = new RegisterRequest(
+        String password = "TestAdminPassword123!";
+        appUserRepository.save(new AppUser(
                 "garageadmin",
                 "garageadmin@example.com",
-                "Admin@123",
+                passwordEncoder.encode(password),
                 Set.of(Role.ADMIN)
-        );
+        ));
 
-        MvcResult result = mockMvc.perform(post("/api/auth/register")
+        MvcResult result = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
+                        .content(objectMapper.writeValueAsString(new AuthRequest("garageadmin", password))))
+                .andExpect(status().isOk())
                 .andReturn();
 
         return objectMapper.readTree(result.getResponse().getContentAsString())
