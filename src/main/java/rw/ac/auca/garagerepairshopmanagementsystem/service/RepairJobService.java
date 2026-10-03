@@ -71,7 +71,8 @@ public class RepairJobService {
         return toResponse(repairJobRepository.save(job));
     }
 
-    public List<RepairJobResponse> findAll() {
+        @Transactional(readOnly = true)
+        public List<RepairJobResponse> findAll() {
 
         return repairJobRepository.findAllByVehicleGarageId(garageContext.requireGarageId())
                 .stream()
@@ -79,7 +80,8 @@ public class RepairJobService {
                 .toList();
     }
 
-    public RepairJobResponse findById(Long id) {
+        @Transactional(readOnly = true)
+        public RepairJobResponse findById(Long id) {
 
         RepairJob job = repairJobRepository.findByIdAndVehicleGarageId(id, garageContext.requireGarageId())
                 .orElseThrow(() ->

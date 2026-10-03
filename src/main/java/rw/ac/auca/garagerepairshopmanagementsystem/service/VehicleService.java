@@ -70,6 +70,7 @@ public class VehicleService {
         return toResponse(vehicleRepository.save(vehicle));
     }
 
+        @Transactional(readOnly = true)
         @Cacheable(value = "vehicles", key = "@garageContext.requireGarageId()")
     public List<VehicleResponse> findAll() {
 
@@ -79,6 +80,7 @@ public class VehicleService {
                 .toList();
     }
 
+        @Transactional(readOnly = true)
         @Cacheable(value = "vehicles", key = "#id + ':' + @garageContext.requireGarageId()")
     public VehicleResponse findById(Long id) {
 

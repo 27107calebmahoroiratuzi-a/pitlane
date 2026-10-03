@@ -36,7 +36,7 @@ import rw.ac.auca.garagerepairshopmanagementsystem.repository.GarageRepository;
 
 import java.util.Set;
 
-@SpringBootTest
+@SpringBootTest(properties = "spring.jpa.open-in-view=false")
 @AutoConfigureMockMvc
 class GarageApiIntegrationTest {
 
@@ -123,6 +123,10 @@ class GarageApiIntegrationTest {
         mockMvc.perform(authorized(get("/api/vehicles/" + vehicleId), bearerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.model").value("Corolla"));
+
+        mockMvc.perform(authorized(get("/api/vehicles"), bearerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(vehicleId));
 
         MechanicRequest mechanicRequest = new MechanicRequest();
         mechanicRequest.setFullName("Jean Mugisha");

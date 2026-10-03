@@ -26,7 +26,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties = {
         "app.bootstrap.enabled=true",
-        "app.bootstrap.root-password=RootSeedTestPass123!"
+        "app.bootstrap.root-password=RootSeedTestPass123!",
+        "spring.jpa.open-in-view=false"
 })
 @AutoConfigureMockMvc
 class GarageTenantIntegrationTest {
