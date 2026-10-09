@@ -216,6 +216,7 @@ td:first-child, th:first-child { padding-left: 19px; }
 .auth-brand-bottom { color: #a5b2a7; font-size: 9px; font-weight: 700; letter-spacing: 1.2px; }.auth-brand-bottom > div { display: flex; align-items: center; gap: 8px; margin-top: 9px; color: #74867a; font-size: 8px; }.auth-brand-bottom i { width: 19px; height: 2px; background: var(--lime); }
 .auth-form-panel { display: flex; flex-direction: column; justify-content: center; padding: 48px 52px; }.auth-form-heading > span:nth-child(2) { margin-left: 8px; color: #829084; font-size: 9px; font-weight: 700; letter-spacing: 1.2px; }.auth-form-heading h1 { margin-top: 16px; color: #2d3a31; font-family: "Space Grotesk", sans-serif; font-size: 29px; font-weight: 600; }.auth-form-heading p { margin-top: 7px; color: #89938b; font-size: 12px; }
 .auth-form { display: grid; gap: 17px; margin-top: 28px; }.auth-form .form-field { gap: 8px; font-size: 11px; }.auth-form .form-field input { min-height: 42px; font-size: 12px; }.auth-submit { justify-content: space-between; min-height: 42px; margin-top: 4px; padding: 0 15px; font-size: 12px; }.auth-form-panel .alert { margin: 18px 0 -9px; }
+.auth-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }.field-hint { color: #9aa49c; font-size: 10px; font-weight: 400; }.auth-form .field-hint { margin-top: -9px; }.auth-form-heading p strong { color: #4d5d52; font-weight: 600; }.auth-form-panel > .auth-submit { margin-top: 30px; }
 .logout-button { color: #a9b6ab; }.logout-button:hover { color: #f3f7ed; border-color: rgba(228, 237, 228, .13); background: rgba(255, 255, 255, .07); }
 .admin-layout { display: grid; grid-template-columns: minmax(260px, .8fr) minmax(0, 1.2fr); align-items: start; gap: 15px; }
 .team-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(270px, .75fr); align-items: start; gap: 15px; }
@@ -269,6 +270,7 @@ td:first-child, th:first-child { padding-left: 19px; }
 @media (max-width: 600px) {
   .auth-screen { padding: 14px; }
   .auth-panel { width: min(100%, 430px); min-height: 0; grid-template-columns: 1fr; }
+  .auth-form-row { grid-template-columns: 1fr; gap: 17px; }
   .auth-brand { min-height: 215px; gap: 14px; padding: 18px 22px; }
   .auth-brand-bottom { display: none; }
   .auth-brand-message { margin: 0; }
