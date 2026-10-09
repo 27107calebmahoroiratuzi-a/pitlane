@@ -6,6 +6,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
 import rw.ac.auca.garagerepairshopmanagementsystem.dto.AcceptInvitationRequest;
+import rw.ac.auca.garagerepairshopmanagementsystem.dto.InvitationPreviewRequest;
+import rw.ac.auca.garagerepairshopmanagementsystem.dto.InvitationPreviewResponse;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -27,6 +29,12 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request) {
         return ResponseEntity.ok(authenticationService.login(request));
+    }
+
+    /** Token travels in the body rather than the URL so it does not end up in access logs. */
+    @PostMapping("/invitations/preview")
+    public ResponseEntity<InvitationPreviewResponse> previewInvitation(@Valid @RequestBody InvitationPreviewRequest request) {
+        return ResponseEntity.ok(invitationService.preview(request.token()));
     }
 
     @PostMapping("/invitations/accept")

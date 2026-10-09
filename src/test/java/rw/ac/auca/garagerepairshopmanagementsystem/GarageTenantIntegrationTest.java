@@ -27,6 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = {
         "app.bootstrap.enabled=true",
         "app.bootstrap.root-password=RootSeedTestPass123!",
+        "app.security.invitation.expose-link=true",
         "spring.jpa.open-in-view=false"
 })
 @AutoConfigureMockMvc
@@ -124,7 +125,8 @@ class GarageTenantIntegrationTest {
         MvcResult result = mockMvc.perform(post("/api/auth/invitations/accept")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
-                                "token", token, "username", username, "password", password))))
+                                "token", token, "fullName", username + " Example",
+                                "username", username, "password", password))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.roles[0]").value(invitation.path("adminInvitation").path("role").asText().isBlank()
                         ? "MANAGER" : "GARAGE_ADMIN"))

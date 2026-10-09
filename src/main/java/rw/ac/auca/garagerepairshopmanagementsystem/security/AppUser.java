@@ -29,6 +29,12 @@ public class AppUser {
     @Column(nullable = false)
     private String password;
 
+    @Column(name = "full_name", length = 120)
+    private String fullName;
+
+    @Column(length = 30)
+    private String phone;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
             name = "app_user_roles",
@@ -76,6 +82,14 @@ public class AppUser {
         return password;
     }
 
+    public String getFullName() {
+        return fullName;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
     public Set<Role> getRoles() {
         return roles;
     }
@@ -102,6 +116,14 @@ public class AppUser {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 
     public void setRoles(Set<Role> roles) {

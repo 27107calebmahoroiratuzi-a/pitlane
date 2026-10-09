@@ -114,9 +114,12 @@ export type AuthSession = {
 };
 
 export type GarageInfo = { id: number; name: string; createdAt: string };
-export type InvitationInfo = { email: string; role: string; acceptanceUrl: string; expiresAt: string; message: string };
+/** acceptanceUrl is only returned when the backend runs with INVITATION_EXPOSE_LINK=true. */
+export type InvitationInfo = { email: string; role: string; acceptanceUrl: string | null; expiresAt: string; message: string };
 export type GarageCreation = { garage: GarageInfo; adminInvitation: InvitationInfo };
-export type TeamMember = { id: number; username: string; email: string; role: string };
+export type TeamMember = { id: number; username: string; fullName: string | null; email: string; role: string };
+export type InvitationPreview = { email: string; role: string; garageName: string; invitedBy: string; expiresAt: string };
+export type InvitationAcceptance = { token: string; fullName: string; phone: string; username: string; password: string };
 
 const apiBase = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api").replace(/\/$/, "");
 const authStorageKey = "pitlane.auth";
@@ -148,10 +151,17 @@ export async function signIn(username: string, password: string): Promise<AuthSe
   return session;
 }
 
-export async function acceptInvitation(token: string, username: string, password: string): Promise<AuthSession> {
+export function previewInvitation(token: string): Promise<InvitationPreview> {
+  return apiRequest<InvitationPreview>("/auth/invitations/preview", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
+}
+
+export async function acceptInvitation(acceptance: InvitationAcceptance): Promise<AuthSession> {
   const session = await apiRequest<AuthSession>("/auth/invitations/accept", {
     method: "POST",
-    body: JSON.stringify({ token, username, password }),
+    body: JSON.stringify(acceptance),
   });
   saveAuthSession(session);
   return session;
@@ -178,8 +188,9 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
   }
 
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => null) as { message?: string } | null;
-    throw new Error(errorBody?.message || `Request failed (${response.status})`);
+    const errorBody = await response.json().catch(() => null) as { message?: string; errors?: Record<string, string> } | null;
+    const fieldErrors = errorBody?.errors ? Object.values(errorBody.errors).join(". ") : "";
+    throw new Error(fieldErrors || errorBody?.message || `Request failed (${response.status})`);
   }
 
   if (response.status === 204) {

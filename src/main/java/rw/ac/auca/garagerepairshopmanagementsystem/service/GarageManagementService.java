@@ -60,7 +60,7 @@ public class GarageManagementService {
     public List<TeamMemberResponse> currentTeam() {
         Long garageId = garageContext.requireGarageId();
         return appUserRepository.findAllByGarageId(garageId).stream()
-                .map(user -> new TeamMemberResponse(user.getId(), user.getUsername(), user.getEmail(),
+                .map(user -> new TeamMemberResponse(user.getId(), user.getUsername(), user.getFullName(), user.getEmail(),
                         user.getRoles().stream().findFirst().map(Role::effectiveRole).map(Enum::name).orElse("USER")))
                 .toList();
     }
